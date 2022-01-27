@@ -1,0 +1,16 @@
+# Service configuration
+server:
+  server_host: "0.0.0.0"
+  server_port: 8100
+
+# Database configuration. 
+# database_type is used for loading the proper controller. 
+# Supported for now: redis
+database:
+  db_instance: "redis"
+  db_host: "redis-service.ti-sph"
+  db_port: 6379
+  db_username: ""
+  db_password: ""
+  db_name: "0"
+

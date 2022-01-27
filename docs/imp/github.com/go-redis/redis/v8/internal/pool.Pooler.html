@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Method Implmentations: github.com/go-redis/redis/v8/internal/pool.Pooler</title>
+<link href="../../../../../../css/light-v0.3.6.css" rel="stylesheet">
+<script src="../../../../../../jvs/golds-v0.3.6.js"></script>
+<body onload="onPageLoad()"><div>
+<pre><code><span style="font-size:x-large;">type <a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html">github.com/go-redis/redis/v8/internal/pool</a>.<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool.go.html#line-41">Pooler</a></b></span><span style="font-size:large;"> <b><i>(interface)</i></b></span>
+
+<code><span class="title">Method Implmentations<span class="title-stat"><i></i></span></span>
+
+<div class="anchor" id="name-Close">	<a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool.go.html#line-53">Close</a>() <a href="../../../../../../pkg/builtin.html#name-error">error</a>
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-ConnPool">ConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool.go.html#line-436">Close</a></b>
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-SingleConnPool">SingleConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool_single.go.html#line-42">Close</a></b>
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-StickyConnPool">StickyConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool_sticky.go.html#line-126">Close</a></b></div>
+<div class="anchor" id="name-CloseConn">	<a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool.go.html#line-43">CloseConn</a>(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-Conn">Conn</a>) <a href="../../../../../../pkg/builtin.html#name-error">error</a>
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-ConnPool">ConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool.go.html#line-357">CloseConn</a></b>
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-SingleConnPool">SingleConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool_single.go.html#line-24">CloseConn</a></b>
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-StickyConnPool">StickyConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool_sticky.go.html#line-64">CloseConn</a></b></div>
+<div class="anchor" id="name-Get">	<a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool.go.html#line-45">Get</a>(<a href="../../../../../../pkg/context.html">context</a>.<a href="../../../../../../pkg/context.html#name-Context">Context</a>) (*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-Conn">Conn</a>, <a href="../../../../../../pkg/builtin.html#name-error">error</a>)
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-ConnPool">ConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool.go.html#line-229">Get</a></b>
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-SingleConnPool">SingleConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool_single.go.html#line-28">Get</a></b>
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-StickyConnPool">StickyConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool_sticky.go.html#line-68">Get</a></b></div>
+<div class="anchor" id="name-IdleLen">	<a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool.go.html#line-50">IdleLen</a>() <a href="../../../../../../pkg/builtin.html#name-int">int</a>
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-ConnPool">ConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool.go.html#line-397">IdleLen</a></b>
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-SingleConnPool">SingleConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool_single.go.html#line-52">IdleLen</a></b>
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-StickyConnPool">StickyConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool_sticky.go.html#line-195">IdleLen</a></b></div>
+<div class="anchor" id="name-Len">	<a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool.go.html#line-49">Len</a>() <a href="../../../../../../pkg/builtin.html#name-int">int</a>
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-ConnPool">ConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool.go.html#line-389">Len</a></b>
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-SingleConnPool">SingleConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool_single.go.html#line-48">Len</a></b>
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-StickyConnPool">StickyConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool_sticky.go.html#line-182">Len</a></b></div>
+<div class="anchor" id="name-NewConn">	<a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool.go.html#line-42">NewConn</a>(<a href="../../../../../../pkg/context.html">context</a>.<a href="../../../../../../pkg/context.html#name-Context">Context</a>) (*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-Conn">Conn</a>, <a href="../../../../../../pkg/builtin.html#name-error">error</a>)
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-ConnPool">ConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool.go.html#line-149">NewConn</a></b>
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-SingleConnPool">SingleConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool_single.go.html#line-20">NewConn</a></b>
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-StickyConnPool">StickyConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool_sticky.go.html#line-60">NewConn</a></b></div>
+<div class="anchor" id="name-Put">	<a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool.go.html#line-46">Put</a>(<a href="../../../../../../pkg/context.html">context</a>.<a href="../../../../../../pkg/context.html#name-Context">Context</a>, *<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-Conn">Conn</a>)
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-ConnPool">ConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool.go.html#line-332">Put</a></b>
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-SingleConnPool">SingleConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool_single.go.html#line-35">Put</a></b>
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-StickyConnPool">StickyConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool_sticky.go.html#line-99">Put</a></b></div>
+<div class="anchor" id="name-Remove">	<a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool.go.html#line-47">Remove</a>(<a href="../../../../../../pkg/context.html">context</a>.<a href="../../../../../../pkg/context.html#name-Context">Context</a>, *<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-Conn">Conn</a>, <a href="../../../../../../pkg/builtin.html#name-error">error</a>)
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-ConnPool">ConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool.go.html#line-351">Remove</a></b>
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-SingleConnPool">SingleConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool_single.go.html#line-37">Remove</a></b>
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-StickyConnPool">StickyConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool_sticky.go.html#line-116">Remove</a></b></div>
+<div class="anchor" id="name-Stats">	<a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool.go.html#line-51">Stats</a>() *<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-Stats">Stats</a>
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-ConnPool">ConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool.go.html#line-404">Stats</a></b>
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-SingleConnPool">SingleConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool_single.go.html#line-56">Stats</a></b>
+		(*<a href="../../../../../../pkg/github.com/go-redis/redis/v8/internal/pool.html#name-StickyConnPool">StickyConnPool</a>).<b><a href="../../../../../../src/github.com/go-redis/redis/v8/internal/pool/pool_sticky.go.html#line-199">Stats</a></b></div></code></pre><pre id="footer">
+<table><tr><td><img src="../../../../../../png/go101-twitter.png"></td>
+<td>The pages are generated with <a href="https://go101.org/article/tool-golds.html"><b>Golds</b></a> <i>v0.3.6</i>. (GOOS=linux GOARCH=amd64)
+<b>Golds</b> is a <a href="https://go101.org">Go 101</a> project developed by <a href="https://tapirgames.com">Tapir Liu</a>.
+PR and bug reports are welcome and can be submitted to <a href="https://github.com/go101/golds">the issue list</a>.
+Please follow <a href="https://twitter.com/go100and1">@Go100and1</a> (reachable from the left QR code) to get the latest news of <b>Golds</b>.</td></tr></table></pre>

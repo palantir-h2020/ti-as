@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Package: github.com/gorilla/mux</title>
+<link href="../../../css/light-v0.3.6.css" rel="stylesheet">
+<script src="../../../jvs/golds-v0.3.6.js"></script>
+<body onload="onPageLoad()"><div>
+
+<pre id="package-details"><code><span style="font-size:xx-large;">package <b>mux</b></span>
+
+<span class="title">Import Path</span>
+	<a href="../../../index.html#pkg-github.com/gorilla/mux">github.com/gorilla/mux</a><i> (on <a href="https://pkg.go.dev/github.com/gorilla/mux" target="_blank">go.dev</a>)</i>
+
+<span class="title">Dependency Relation</span>
+	imports <a href="../../../dep/github.com/gorilla/mux.html">10 packages</a>, and imported by <a href="../../../dep/github.com/gorilla/mux.html#imported-by">one package</a>
+
+<div id="files"><span class="title">Involved Source Files</span>
+
+	<input type='checkbox' checked class="fold" id="file-0-fold-content"><label for="file-0-fold-content">   <a href="../../../src/github.com/gorilla/mux/doc.go.html#doc">#d</a> <a href="../../../src/github.com/gorilla/mux/doc.go.html">doc.go</a></label><span id='file-0-fold-content-items' class="fold-items">
+		Package mux implements a request router and dispatcher.
+
+		The name mux stands for "HTTP request multiplexer". Like the standard
+		http.ServeMux, mux.Router matches incoming requests against a list of
+		registered routes and calls a handler for the route that matches the URL
+		or other conditions. The main features are:
+
+			* Requests can be matched based on URL host, path, path prefix, schemes,
+			  header and query values, HTTP methods or using custom matchers.
+			* URL hosts, paths and query values can have variables with an optional
+			  regular expression.
+			* Registered URLs can be built, or "reversed", which helps maintaining
+			  references to resources.
+			* Routes can be used as subrouters: nested routes are only tested if the
+			  parent route matches. This is useful to define groups of routes that
+			  share common conditions like a host, a path prefix or other repeated
+			  attributes. As a bonus, this optimizes request matching.
+			* It implements the http.Handler interface so it is compatible with the
+			  standard http.ServeMux.
+
+		Let's start registering a couple of URL paths and handlers:
+
+			func main() {
+				r := mux.NewRouter()
+				r.HandleFunc("/", HomeHandler)
+				r.HandleFunc("/products", ProductsHandler)
+				r.HandleFunc("/articles", ArticlesHandler)
+				http.Handle("/", r)
+			}
+
+		Here we register three routes mapping URL paths to handlers. This is
+		equivalent to how http.HandleFunc() works: if an incoming request URL matches
+		one of the paths, the corresponding handler is called passing
+		(http.ResponseWriter, *http.Request) as parameters.
+
+		Paths can have variables. They are defined using the format {name} or
+		{name:pattern}. If a regular expression pattern is not defined, the matched
+		variable will be anything until the next slash. For example:
+
+			r := mux.NewRouter()
+			r.HandleFunc("/products/{key}", ProductHandler)
+			r.HandleFunc("/articles/{category}/", ArticlesCategoryHandler)
+			r.HandleFunc("/articles/{category}/{id:[0-9]+}", ArticleHandler)
+
+		Groups can be used inside patterns, as long as they are non-capturing (?:re). For example:
+
+			r.HandleFunc("/articles/{category}/{sort:(?:asc|desc|new)}", ArticlesCategoryHandler)
+
+		The names are used to create a map of route variables which can be retrieved
+		calling mux.Vars():
+
+			vars := mux.Vars(request)
+			category := vars["category"]
+
+		Note that if any capturing groups are present, mux will panic() during parsing. To prevent
+		this, convert any capturing groups to non-capturing, e.g. change "/{sort:(asc|desc)}" to
+		"/{sort:(?:asc|desc)}". This is a change from prior versions which behaved unpredictably
+		when capturing groups were present.
+
+		And this is all you need to know about the basic usage. More advanced options
+		are explained below.
+
+		Routes can also be restricted to a domain or subdomain. Just define a host
+		pattern to be matched. They can also have variables:
+
+			r := mux.NewRouter()
+			// Only matches if domain is "www.example.com".
+			r.Host("www.example.com")
+			// Matches a dynamic subdomain.
+			r.Host("{subdomain:[a-z]+}.domain.com")
+
+		There are several other matchers that can be added. To match path prefixes:
+
+			r.PathPrefix("/products/")
+
+		...or HTTP methods:
+
+			r.Methods("GET", "POST")
+
+		...or URL schemes:
+
+			r.Schemes("https")
+
+		...or header values:
+
+			r.Headers("X-Requested-With", "XMLHttpRequest")
+
+		...or query values:
+
+			r.Queries("key", "value")
+
+		...or to use a custom matcher function:
+
+			r.MatcherFunc(func(r *http.Request, rm *RouteMatch) bool {
+				return r.ProtoMajor == 0
+			})
+
+		...and finally, it is possible to combine several matchers in a single route:
+
+			r.HandleFunc("/products", ProductsHandler).
+			  Host("www.example.com").
+			  Methods("GET").
+			  Schemes("http")
+
+		Setting the same matching conditions again and again can be boring, so we have
+		a way to group several routes that share the same requirements.
+		We call it "subrouting".
+
+		For example, let's say we have several URLs that should only match when the
+		host is "www.example.com". Create a route for that host and get a "subrouter"
+		from it:
+
+			r := mux.NewRouter()
+			s := r.Host("www.example.com").Subrouter()
+
+		Then register routes in the subrouter:
+
+			s.HandleFunc("/products/", ProductsHandler)
+			s.HandleFunc("/products/{key}", ProductHandler)
+			s.HandleFunc("/articles/{category}/{id:[0-9]+}"), ArticleHandler)
+
+		The three URL paths we registered above will only be tested if the domain is
+		"www.example.com", because the subrouter is tested first. This is not
+		only convenient, but also optimizes request matching. You can create
+		subrouters combining any attribute matchers accepted by a route.
+
+		Subrouters can be used to create domain or path "namespaces": you define
+		subrouters in a central place and then parts of the app can register its
+		paths relatively to a given subrouter.
+
+		There's one more thing about subroutes. When a subrouter has a path prefix,
+		the inner routes use it as base for their paths:
+
+			r := mux.NewRouter()
+			s := r.PathPrefix("/products").Subrouter()
+			// "/products/"
+			s.HandleFunc("/", ProductsHandler)
+			// "/products/{key}/"
+			s.HandleFunc("/{key}/", ProductHandler)
+			// "/products/{key}/details"
+			s.HandleFunc("/{key}/details", ProductDetailsHandler)
+
+		Note that the path provided to PathPrefix() represents a "wildcard": calling
+		PathPrefix("/static/").Handler(...) means that the handler will be passed any
+		request that matches "/static/*". This makes it easy to serve static files with mux:
+
+			func main() {
+				var dir string
+
+				flag.StringVar(&amp;dir, "dir", ".", "the directory to serve files from. Defaults to the current dir")
+				flag.Parse()
+				r := mux.NewRouter()
+
+				// This will serve files under http://localhost:8000/static/&lt;filename&gt;
+				r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(dir))))
+
+				srv := &amp;http.Server{
+					Handler:      r,
+					Addr:         "127.0.0.1:8000",
+					// Good practice: enforce timeouts for servers you create!
+					WriteTimeout: 15 * time.Second,
+					ReadTimeout:  15 * time.Second,
+				}
+
+				log.Fatal(srv.ListenAndServe())
+			}
+
+		Now let's see how to build registered URLs.
+
+		Routes can be named. All routes that define a name can have their URLs built,
+		or "reversed". We define a name calling Name() on a route. For example:
+
+			r := mux.NewRouter()
+			r.HandleFunc("/articles/{category}/{id:[0-9]+}", ArticleHandler).
+			  Name("article")
+
+		To build a URL, get the route and call the URL() method, passing a sequence of
+		key/value pairs for the route variables. For the previous route, we would do:
+
+			url, err := r.Get("article").URL("category", "technology", "id", "42")
+
+		...and the result will be a url.URL with the following path:
+
+			"/articles/technology/42"
+
+		This also works for host and query value variables:
+
+			r := mux.NewRouter()
+			r.Host("{subdomain}.domain.com").
+			  Path("/articles/{category}/{id:[0-9]+}").
+			  Queries("filter", "{filter}").
+			  HandlerFunc(ArticleHandler).
+			  Name("article")
+
+			// url.String() will be "http://news.domain.com/articles/technology/42?filter=gorilla"
+			url, err := r.Get("article").URL("subdomain", "news",
+			                                 "category", "technology",
+			                                 "id", "42",
+			                                 "filter", "gorilla")
+
+		All variables defined in the route are required, and their values must
+		conform to the corresponding patterns. These requirements guarantee that a
+		generated URL will always match a registered route -- the only exception is
+		for explicitly defined "build-only" routes which never match.
+
+		Regex support also exists for matching Headers within a route. For example, we could do:
+
+			r.HeadersRegexp("Content-Type", "application/(text|json)")
+
+		...and the route will match both requests with a Content-Type of `application/json` as well as
+		`application/text`
+
+		There's also a way to build only the URL host or path for a route:
+		use the methods URLHost() or URLPath() instead. For the previous route,
+		we would do:
+
+			// "http://news.domain.com/"
+			host, err := r.Get("article").URLHost("subdomain", "news")
+
+			// "/articles/technology/42"
+			path, err := r.Get("article").URLPath("category", "technology", "id", "42")
+
+		And if you use subrouters, host and path defined separately can be built
+		as well:
+
+			r := mux.NewRouter()
+			s := r.Host("{subdomain}.domain.com").Subrouter()
+			s.Path("/articles/{category}/{id:[0-9]+}").
+			  HandlerFunc(ArticleHandler).
+			  Name("article")
+
+			// "http://news.domain.com/articles/technology/42"
+			url, err := r.Get("article").URL("subdomain", "news",
+			                                 "category", "technology",
+			                                 "id", "42")
+
+		Mux supports the addition of middlewares to a Router, which are executed in the order they are added if a match is found, including its subrouters. Middlewares are (typically) small pieces of code which take one request, do something with it, and pass it down to another middleware or the final handler. Some common use cases for middleware are request logging, header manipulation, or ResponseWriter hijacking.
+
+			type MiddlewareFunc func(http.Handler) http.Handler
+
+		Typically, the returned handler is a closure which does something with the http.ResponseWriter and http.Request passed to it, and then calls the handler passed as parameter to the MiddlewareFunc (closures can access variables from the context where they are created).
+
+		A very basic middleware which logs the URI of the request being handled could be written as:
+
+			func simpleMw(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					// Do stuff here
+					log.Println(r.RequestURI)
+					// Call the next handler, which can be another middleware in the chain, or the final handler.
+					next.ServeHTTP(w, r)
+				})
+			}
+
+		Middlewares can be added to a router using `Router.Use()`:
+
+			r := mux.NewRouter()
+			r.HandleFunc("/", handler)
+			r.Use(simpleMw)
+
+		A more complex authentication middleware, which maps session token to users, could be written as:
+
+			// Define our struct
+			type authenticationMiddleware struct {
+				tokenUsers map[string]string
+			}
+
+			// Initialize it somewhere
+			func (amw *authenticationMiddleware) Populate() {
+				amw.tokenUsers["00000000"] = "user0"
+				amw.tokenUsers["aaaaaaaa"] = "userA"
+				amw.tokenUsers["05f717e5"] = "randomUser"
+				amw.tokenUsers["deadbeef"] = "user0"
+			}
+
+			// Middleware function, which will be called for each request
+			func (amw *authenticationMiddleware) Middleware(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					token := r.Header.Get("X-Session-Token")
+
+					if user, found := amw.tokenUsers[token]; found {
+						// We found the token in our map
+						log.Printf("Authenticated user %s\n", user)
+						next.ServeHTTP(w, r)
+					} else {
+						http.Error(w, "Forbidden", http.StatusForbidden)
+					}
+				})
+			}
+
+			r := mux.NewRouter()
+			r.HandleFunc("/", handler)
+
+			amw := authenticationMiddleware{tokenUsers: make(map[string]string)}
+			amw.Populate()
+
+			r.Use(amw.Middleware)
+
+		Note: The handler chain will be stopped if your middleware doesn't call `next.ServeHTTP()` with the corresponding parameters. This can be used to abort a request if the middleware writer wants to.
+</span>
+	<span class="nodocs">      <a href="../../../src/github.com/gorilla/mux/middleware.go.html">middleware.go</a></span>
+	<span class="nodocs">      <a href="../../../src/github.com/gorilla/mux/mux.go.html">mux.go</a></span>
+	<span class="nodocs">      <a href="../../../src/github.com/gorilla/mux/regexp.go.html">regexp.go</a></span>
+	<span class="nodocs">      <a href="../../../src/github.com/gorilla/mux/route.go.html">route.go</a></span>
+	<span class="nodocs">      <a href="../../../src/github.com/gorilla/mux/test_helpers.go.html">test_helpers.go</a></span></div>
+<div id="examples"><span class="title">Code Examples</span>
+
+	<input type='checkbox' class="fold" id="example-0-fold-content"><label for="example-0-fold-content">CORSMethodMiddleware</label><span id='example-0-fold-content-items' class="fold-items">
+		package main
+		
+		import (
+			"fmt"
+			"github.com/gorilla/mux"
+			"net/http"
+			"net/http/httptest"
+		)
+		
+		func main() {
+			r := mux.NewRouter()
+		
+			r.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
+				// Handle the request
+			}).Methods(http.MethodGet, http.MethodPut, http.MethodPatch)
+			r.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Access-Control-Allow-Origin", "http://example.com")
+				w.Header().Set("Access-Control-Max-Age", "86400")
+			}).Methods(http.MethodOptions)
+		
+			r.Use(mux.CORSMethodMiddleware(r))
+		
+			rw := httptest.NewRecorder()
+			req, _ := http.NewRequest("OPTIONS", "/foo", nil)                 // needs to be OPTIONS
+			req.Header.Set("Access-Control-Request-Method", "POST")           // needs to be non-empty
+			req.Header.Set("Access-Control-Request-Headers", "Authorization") // needs to be non-empty
+			req.Header.Set("Origin", "http://example.com")                    // needs to be non-empty
+		
+			r.ServeHTTP(rw, req)
+		
+			fmt.Println(rw.Header().Get("Access-Control-Allow-Methods"))
+			fmt.Println(rw.Header().Get("Access-Control-Allow-Origin"))
+		}
+</span>
+	<input type='checkbox' class="fold" id="example-1-fold-content"><label for="example-1-fold-content">Route_HeadersRegexp</label><span id='example-1-fold-content-items' class="fold-items">
+		package main
+		
+		import (
+			"fmt"
+			"github.com/gorilla/mux"
+			"net/http"
+		)
+		
+		func main() {
+			r := mux.NewRouter()
+			route := r.NewRoute().HeadersRegexp("Accept", "html")
+		
+			req1, _ := http.NewRequest("GET", "example.com", nil)
+			req1.Header.Add("Accept", "text/plain")
+			req1.Header.Add("Accept", "text/html")
+		
+			req2, _ := http.NewRequest("GET", "example.com", nil)
+			req2.Header.Set("Accept", "application/xhtml+xml")
+		
+			matchInfo := &mux.RouteMatch{}
+			fmt.Printf("Match: %v %q\n", route.Match(req1, matchInfo), req1.Header["Accept"])
+			fmt.Printf("Match: %v %q\n", route.Match(req2, matchInfo), req2.Header["Accept"])
+		}
+</span>
+	<input type='checkbox' class="fold" id="example-2-fold-content"><label for="example-2-fold-content">Route_HeadersRegexp_exactMatch</label><span id='example-2-fold-content-items' class="fold-items">
+		package main
+		
+		import (
+			"fmt"
+			"github.com/gorilla/mux"
+			"net/http"
+		)
+		
+		func main() {
+			r := mux.NewRouter()
+			route := r.NewRoute().HeadersRegexp("Origin", "^https://example.co$")
+		
+			yes, _ := http.NewRequest("GET", "example.co", nil)
+			yes.Header.Set("Origin", "https://example.co")
+		
+			no, _ := http.NewRequest("GET", "example.co.uk", nil)
+			no.Header.Set("Origin", "https://example.co.uk")
+		
+			matchInfo := &mux.RouteMatch{}
+			fmt.Printf("Match: %v %q\n", route.Match(yes, matchInfo), yes.Header["Origin"])
+			fmt.Printf("Match: %v %q\n", route.Match(no, matchInfo), no.Header["Origin"])
+		}
+</span>
+	<input type='checkbox' class="fold" id="example-3-fold-content"><label for="example-3-fold-content">_authenticationMiddleware</label><span id='example-3-fold-content-items' class="fold-items">
+		package main
+		
+		import (
+			"log"
+			"net/http"
+		
+			"github.com/gorilla/mux"
+		)
+		
+		// Define our struct
+		type authenticationMiddleware struct {
+			tokenUsers map[string]string
+		}
+		
+		// Initialize it somewhere
+		func (amw *authenticationMiddleware) Populate() {
+			amw.tokenUsers["00000000"] = "user0"
+			amw.tokenUsers["aaaaaaaa"] = "userA"
+			amw.tokenUsers["05f717e5"] = "randomUser"
+			amw.tokenUsers["deadbeef"] = "user0"
+		}
+		
+		// Middleware function, which will be called for each request
+		func (amw *authenticationMiddleware) Middleware(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				token := r.Header.Get("X-Session-Token")
+		
+				if user, found := amw.tokenUsers[token]; found {
+					// We found the token in our map
+					log.Printf("Authenticated user %s\n", user)
+					next.ServeHTTP(w, r)
+				} else {
+					http.Error(w, "Forbidden", http.StatusForbidden)
+				}
+			})
+		}
+		
+		func main() {
+			r := mux.NewRouter()
+			r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+				// Do something here
+			})
+			amw := authenticationMiddleware{make(map[string]string)}
+			amw.Populate()
+			r.Use(amw.Middleware)
+		}
+</span>
+</div>
+<div id="exported-types"><span class="title">Package-Level Type Names<span class="title-stat"><i> (total 19, in which 7 are exported)</i></span></span>
+
+<div id="exported-types-buttons" class="js-on">	/* sort exporteds by: <label id="sort-types-by-alphabet" class="button">alphabet</label> | <label id="sort-types-by-popularity" class="button">popularity</label> */</div><div class="anchor type-res" id="name-BuildVarsFunc" data-popularity="70">	<input type='checkbox' class="fold" id="BuildVarsFunc-fold-content"><label for="BuildVarsFunc-fold-content"> type <a href="../../../src/github.com/gorilla/mux/route.go.html#line-453">BuildVarsFunc</a> <i>(func)</i></label><span id='BuildVarsFunc-fold-content-docs' class="fold-docs">
+		BuildVarsFunc is the function signature used by custom build variable
+		functions (which can modify route variables before a route's URL is built).
+
+		<input type='checkbox' class="fold" id="BuildVarsFunc-fold-params"><label for="BuildVarsFunc-fold-params">As Inputs Of (<i>at least 2, both are exported</i>)</label><span id='BuildVarsFunc-fold-params-items' class="fold-items"><span>
+			func (*<a href="#name-Route">Route</a>).<a href="../../../src/github.com/gorilla/mux/route.go.html#line-457">BuildVarsFunc</a>(f <b>BuildVarsFunc</b>) *<a href="#name-Route">Route</a></span><span>
+			func (*<a href="#name-Router">Router</a>).<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-353">BuildVarsFunc</a>(f <b>BuildVarsFunc</b>) *<a href="#name-Route">Route</a></span></span>
+
+</span></div><div class="anchor type-res" id="name-MatcherFunc" data-popularity="170">	<input type='checkbox' class="fold" id="MatcherFunc-fold-content"><label for="MatcherFunc-fold-content"> type <a href="../../../src/github.com/gorilla/mux/route.go.html#line-301">MatcherFunc</a> <i>(func)</i></label><span id='MatcherFunc-fold-content-docs' class="fold-docs">
+		MatcherFunc is the function signature used by custom matchers.
+
+		<input type='checkbox' class="fold" id="MatcherFunc-fold-methods"><label for="MatcherFunc-fold-methods">Methods (<i>only one, which is exported</i>)</label><span id='MatcherFunc-fold-methods-items' class="fold-items"><span>
+			<input type='checkbox' class="fold" id="MatcherFunc-fold-method-Match"><label for="MatcherFunc-fold-method-Match">( T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-304">Match</a>(r *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>, match *<a href="#name-RouteMatch">RouteMatch</a>) <a href="../../builtin.html#name-bool">bool</a></label><span id='MatcherFunc-fold-method-Match-docs' class="fold-docs">
+				Match returns the match for a given request.
+</span></span></span>
+		<input type='checkbox' class="fold" id="MatcherFunc-fold-impls"><label for="MatcherFunc-fold-impls">Implements (<i>at least one unexported</i>)</label><span id='MatcherFunc-fold-impls-items' class="fold-items">
+			<input type='checkbox' class="showhide" id="MatcherFunc-showhide-impls"><i><label for="MatcherFunc-showhide-impls" class="show-inline">/* at least one unexported ... */</label><label for="MatcherFunc-showhide-impls" class="hide-inline">/* at least one unexported: */</label></i><span class="hidden"><i>
+			 T : <a href="#name-matcher">matcher</a></i></span></span>
+		<input type='checkbox' class="fold" id="MatcherFunc-fold-params"><label for="MatcherFunc-fold-params">As Inputs Of (<i>at least 2, both are exported</i>)</label><span id='MatcherFunc-fold-params-items' class="fold-items"><span>
+			func (*<a href="#name-Route">Route</a>).<a href="../../../src/github.com/gorilla/mux/route.go.html#line-309">MatcherFunc</a>(f <b>MatcherFunc</b>) *<a href="#name-Route">Route</a></span><span>
+			func (*<a href="#name-Router">Router</a>).<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-317">MatcherFunc</a>(f <b>MatcherFunc</b>) *<a href="#name-Route">Route</a></span></span>
+
+</span></div><div class="anchor type-res" id="name-MiddlewareFunc" data-popularity="210">	<input type='checkbox' class="fold" id="MiddlewareFunc-fold-content"><label for="MiddlewareFunc-fold-content"> type <a href="../../../src/github.com/gorilla/mux/middleware.go.html#line-11">MiddlewareFunc</a> <i>(func)</i></label><span id='MiddlewareFunc-fold-content-docs' class="fold-docs">
+		MiddlewareFunc is a function which receives an http.Handler and returns another http.Handler.
+		Typically, the returned handler is a closure which does something with the http.ResponseWriter and http.Request passed
+		to it, and then calls the handler passed as parameter to the MiddlewareFunc.
+
+		<input type='checkbox' class="fold" id="MiddlewareFunc-fold-methods"><label for="MiddlewareFunc-fold-methods">Methods (<i>only one, which is exported</i>)</label><span id='MiddlewareFunc-fold-methods-items' class="fold-items"><span>
+			<input type='checkbox' class="fold" id="MiddlewareFunc-fold-method-Middleware"><label for="MiddlewareFunc-fold-method-Middleware">( T) <a href="../../../src/github.com/gorilla/mux/middleware.go.html#line-19">Middleware</a>(handler <a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Handler">Handler</a>) <a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Handler">Handler</a></label><span id='MiddlewareFunc-fold-method-Middleware-docs' class="fold-docs">
+				Middleware allows MiddlewareFunc to implement the middleware interface.
+</span></span></span>
+		<input type='checkbox' class="fold" id="MiddlewareFunc-fold-impls"><label for="MiddlewareFunc-fold-impls">Implements (<i>at least one unexported</i>)</label><span id='MiddlewareFunc-fold-impls-items' class="fold-items">
+			<input type='checkbox' class="showhide" id="MiddlewareFunc-showhide-impls"><i><label for="MiddlewareFunc-showhide-impls" class="show-inline">/* at least one unexported ... */</label><label for="MiddlewareFunc-showhide-impls" class="hide-inline">/* at least one unexported: */</label></i><span class="hidden"><i>
+			 T : <a href="#name-middleware">middleware</a></i></span></span>
+		<input type='checkbox' class="fold" id="MiddlewareFunc-fold-results"><label for="MiddlewareFunc-fold-results">As Outputs Of (<i>at least one exported</i>)</label><span id='MiddlewareFunc-fold-results-items' class="fold-items"><span>
+			func <a href="#name-CORSMethodMiddleware">CORSMethodMiddleware</a>(r *<a href="#name-Router">Router</a>) <b>MiddlewareFunc</b></span></span>
+		<input type='checkbox' class="fold" id="MiddlewareFunc-fold-params"><label for="MiddlewareFunc-fold-params">As Inputs Of (<i>at least one exported</i>)</label><span id='MiddlewareFunc-fold-params-items' class="fold-items"><span>
+			func (*<a href="#name-Router">Router</a>).<a href="../../../src/github.com/gorilla/mux/middleware.go.html#line-24">Use</a>(mwf ...<b>MiddlewareFunc</b>)</span></span>
+
+</span></div><div class="anchor type-res" id="name-Route" data-popularity="4095">	<input type='checkbox' class="fold" id="Route-fold-content"><label for="Route-fold-content"> type <a href="../../../src/github.com/gorilla/mux/route.go.html#line-17">Route</a> <i>(struct)</i></label><span id='Route-fold-content-docs' class="fold-docs">
+		Route stores information to match a request and build URLs.
+
+		<input type='checkbox' class="fold" id="Route-fold-fields"><label for="Route-fold-fields">Fields (<i>total 13, none are exported</i>)</label><span id='Route-fold-fields-items' class="fold-items">
+			<input type='checkbox' class="showhide" id="Route-showhide-fields"><i><label for="Route-showhide-fields" class="show-inline">/* 13 unexporteds ... */</label><label for="Route-showhide-fields" class="hide-inline">/* 13 unexporteds: */</label></i><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Route-fold-field-buildOnly"><label for="Route-fold-field-buildOnly"><a href="../../../src/github.com/gorilla/mux/route.go.html#line-21">buildOnly</a> <i><a href="../../builtin.html#name-bool">bool</a></i></label><span id='Route-fold-field-buildOnly-docs' class="fold-docs">
+				If true, this route never matches: it is only used to build URLs.
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Route-fold-field-err"><label for="Route-fold-field-err"><a href="../../../src/github.com/gorilla/mux/route.go.html#line-25">err</a> <i><a href="../../builtin.html#name-error">error</a></i></label><span id='Route-fold-field-err-docs' class="fold-docs">
+				Error resulted from building a route.
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Route-fold-field-handler"><label for="Route-fold-field-handler"><a href="../../../src/github.com/gorilla/mux/route.go.html#line-19">handler</a> <i><a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Handler">Handler</a></i></label><span id='Route-fold-field-handler-docs' class="fold-docs">
+				Request handler for the route.
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Route-fold-field-name"><label for="Route-fold-field-name"><a href="../../../src/github.com/gorilla/mux/route.go.html#line-23">name</a> <i><a href="../../builtin.html#name-string">string</a></i></label><span id='Route-fold-field-name-docs' class="fold-docs">
+				The name used to build URLs.
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Route-fold-field-namedRoutes"><label for="Route-fold-field-namedRoutes"><a href="../../../src/github.com/gorilla/mux/route.go.html#line-28">namedRoutes</a> <i>map[<a href="../../builtin.html#name-string">string</a>]*<b>Route</b></i></label><span id='Route-fold-field-namedRoutes-docs' class="fold-docs">
+				"global" reference to all named routes
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Route-fold-field-routeConf"><label for="Route-fold-field-routeConf"><a href="../../../src/github.com/gorilla/mux/route.go.html#line-31">routeConf</a> <i><a href="#name-routeConf">routeConf</a></i></label><span id='Route-fold-field-routeConf-docs' class="fold-docs">
+				config possibly passed in from `Router`
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Route-fold-field-buildScheme"><label for="Route-fold-field-buildScheme"><a href="../../../src/github.com/gorilla/mux/route.go.html#line-31" class="path-duplicate">routeConf</a>.<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-92">buildScheme</a> <i><a href="../../builtin.html#name-string">string</a></i></label><span id='Route-fold-field-buildScheme-docs' class="fold-docs">
+				The scheme used when building URLs.
+</span></i></span><span class="hidden"><i>
+			<span class="nodocs"><a href="../../../src/github.com/gorilla/mux/route.go.html#line-31" class="path-duplicate">routeConf</a>.<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-94">buildVarsFunc</a> <i><a href="#name-BuildVarsFunc">BuildVarsFunc</a></i></span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Route-fold-field-matchers"><label for="Route-fold-field-matchers"><a href="../../../src/github.com/gorilla/mux/route.go.html#line-31" class="path-duplicate">routeConf</a>.<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-89">matchers</a> <i>[]<a href="#name-matcher">matcher</a></i></label><span id='Route-fold-field-matchers-docs' class="fold-docs">
+				List of matchers.
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Route-fold-field-regexp"><label for="Route-fold-field-regexp"><a href="../../../src/github.com/gorilla/mux/route.go.html#line-31" class="path-duplicate">routeConf</a>.<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-86">regexp</a> <i><a href="#name-routeRegexpGroup">routeRegexpGroup</a></i></label><span id='Route-fold-field-regexp-docs' class="fold-docs">
+				Manager for the variables from host and path.
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Route-fold-field-skipClean"><label for="Route-fold-field-skipClean"><a href="../../../src/github.com/gorilla/mux/route.go.html#line-31" class="path-duplicate">routeConf</a>.<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-83">skipClean</a> <i><a href="../../builtin.html#name-bool">bool</a></i></label><span id='Route-fold-field-skipClean-docs' class="fold-docs">
+				If true, when the path pattern is "/path//to", accessing "/path//to"
+				will not redirect
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Route-fold-field-strictSlash"><label for="Route-fold-field-strictSlash"><a href="../../../src/github.com/gorilla/mux/route.go.html#line-31" class="path-duplicate">routeConf</a>.<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-79">strictSlash</a> <i><a href="../../builtin.html#name-bool">bool</a></i></label><span id='Route-fold-field-strictSlash-docs' class="fold-docs">
+				If true, when the path pattern is "/path/", accessing "/path" will
+				redirect to the former and vice versa.
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Route-fold-field-useEncodedPath"><label for="Route-fold-field-useEncodedPath"><a href="../../../src/github.com/gorilla/mux/route.go.html#line-31" class="path-duplicate">routeConf</a>.<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-75">useEncodedPath</a> <i><a href="../../builtin.html#name-bool">bool</a></i></label><span id='Route-fold-field-useEncodedPath-docs' class="fold-docs">
+				If true, "/path/foo%2Fbar/to" will match the path "/path/{var}/to"
+</span></i></span></span>
+		<input type='checkbox' class="fold" id="Route-fold-methods"><label for="Route-fold-methods">Methods (<i>total 33, in which 29 are exported</i>)</label><span id='Route-fold-methods-items' class="fold-items"><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-BuildOnly"><label for="Route-fold-method-BuildOnly">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-110">BuildOnly</a>() *<b>Route</b></label><span id='Route-fold-method-BuildOnly-docs' class="fold-docs">
+				BuildOnly sets the route to never match: it is only used to build URLs.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-BuildVarsFunc"><label for="Route-fold-method-BuildVarsFunc">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-457">BuildVarsFunc</a>(f <a href="#name-BuildVarsFunc">BuildVarsFunc</a>) *<b>Route</b></label><span id='Route-fold-method-BuildVarsFunc-docs' class="fold-docs">
+				BuildVarsFunc adds a custom function to be used to modify build variables
+				before a route's URL is built.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-GetError"><label for="Route-fold-method-GetError">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-105">GetError</a>() <a href="../../builtin.html#name-error">error</a></label><span id='Route-fold-method-GetError-docs' class="fold-docs">
+				GetError returns an error resulted from building the route, if any.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-GetHandler"><label for="Route-fold-method-GetHandler">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-131">GetHandler</a>() <a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Handler">Handler</a></label><span id='Route-fold-method-GetHandler-docs' class="fold-docs">
+				GetHandler returns the handler for the route, if any.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-GetHostTemplate"><label for="Route-fold-method-GetHostTemplate">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-711">GetHostTemplate</a>() (<a href="../../builtin.html#name-string">string</a>, <a href="../../builtin.html#name-error">error</a>)</label><span id='Route-fold-method-GetHostTemplate-docs' class="fold-docs">
+				GetHostTemplate returns the template used to build the
+				route match.
+				This is useful for building simple REST API documentation and for instrumentation
+				against third-party services.
+				An error will be returned if the route does not define a host.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-GetMethods"><label for="Route-fold-method-GetMethods">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-694">GetMethods</a>() ([]<a href="../../builtin.html#name-string">string</a>, <a href="../../builtin.html#name-error">error</a>)</label><span id='Route-fold-method-GetMethods-docs' class="fold-docs">
+				GetMethods returns the methods the route matches against
+				This is useful for building simple REST API documentation and for instrumentation
+				against third-party services.
+				An error will be returned if route does not have methods.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-GetName"><label for="Route-fold-method-GetName">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-152">GetName</a>() <a href="../../builtin.html#name-string">string</a></label><span id='Route-fold-method-GetName-docs' class="fold-docs">
+				GetName returns the name for the route, if any.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-GetPathRegexp"><label for="Route-fold-method-GetPathRegexp">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-642">GetPathRegexp</a>() (<a href="../../builtin.html#name-string">string</a>, <a href="../../builtin.html#name-error">error</a>)</label><span id='Route-fold-method-GetPathRegexp-docs' class="fold-docs">
+				GetPathRegexp returns the expanded regular expression used to match route path.
+				This is useful for building simple REST API documentation and for instrumentation
+				against third-party services.
+				An error will be returned if the route does not define a path.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-GetPathTemplate"><label for="Route-fold-method-GetPathTemplate">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-628">GetPathTemplate</a>() (<a href="../../builtin.html#name-string">string</a>, <a href="../../builtin.html#name-error">error</a>)</label><span id='Route-fold-method-GetPathTemplate-docs' class="fold-docs">
+				GetPathTemplate returns the template used to build the
+				route match.
+				This is useful for building simple REST API documentation and for instrumentation
+				against third-party services.
+				An error will be returned if the route does not define a path.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-GetQueriesRegexp"><label for="Route-fold-method-GetQueriesRegexp">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-657">GetQueriesRegexp</a>() ([]<a href="../../builtin.html#name-string">string</a>, <a href="../../builtin.html#name-error">error</a>)</label><span id='Route-fold-method-GetQueriesRegexp-docs' class="fold-docs">
+				GetQueriesRegexp returns the expanded regular expressions used to match the
+				route queries.
+				This is useful for building simple REST API documentation and for instrumentation
+				against third-party services.
+				An error will be returned if the route does not have queries.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-GetQueriesTemplates"><label for="Route-fold-method-GetQueriesTemplates">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-676">GetQueriesTemplates</a>() ([]<a href="../../builtin.html#name-string">string</a>, <a href="../../builtin.html#name-error">error</a>)</label><span id='Route-fold-method-GetQueriesTemplates-docs' class="fold-docs">
+				GetQueriesTemplates returns the templates used to build the
+				query matching.
+				This is useful for building simple REST API documentation and for instrumentation
+				against third-party services.
+				An error will be returned if the route does not define queries.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-Handler"><label for="Route-fold-method-Handler">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-118">Handler</a>(handler <a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Handler">Handler</a>) *<b>Route</b></label><span id='Route-fold-method-Handler-docs' class="fold-docs">
+				Handler sets a handler for the route.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-HandlerFunc"><label for="Route-fold-method-HandlerFunc">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-126">HandlerFunc</a>(f func(<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-ResponseWriter">ResponseWriter</a>, *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>)) *<b>Route</b></label><span id='Route-fold-method-HandlerFunc-docs' class="fold-docs">
+				HandlerFunc sets a handler function for the route.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-Headers"><label for="Route-fold-method-Headers">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-239">Headers</a>(pairs ...<a href="../../builtin.html#name-string">string</a>) *<b>Route</b></label><span id='Route-fold-method-Headers-docs' class="fold-docs">
+				Headers adds a matcher for request header values.
+				It accepts a sequence of key/value pairs to be matched. For example:
+
+				    r := mux.NewRouter()
+				    r.Headers("Content-Type", "application/json",
+				              "X-Requested-With", "XMLHttpRequest")
+
+				The above route will only match if both request header values match.
+				If the value is an empty string, it will match any value if the key is set.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-HeadersRegexp"><label for="Route-fold-method-HeadersRegexp">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-265">HeadersRegexp</a>(pairs ...<a href="../../builtin.html#name-string">string</a>) *<b>Route</b></label><span id='Route-fold-method-HeadersRegexp-docs' class="fold-docs">
+				HeadersRegexp accepts a sequence of key/value pairs, where the value has regex
+				support. For example:
+
+				    r := mux.NewRouter()
+				    r.HeadersRegexp("Content-Type", "application/(text|json)",
+				              "X-Requested-With", "XMLHttpRequest")
+
+				The above route will only match if both the request header matches both regular expressions.
+				If the value is an empty string, it will match any value if the key is set.
+				Use the start and end of string anchors (^ and $) to match an exact value.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-Host"><label for="Route-fold-method-Host">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-293">Host</a>(tpl <a href="../../builtin.html#name-string">string</a>) *<b>Route</b></label><span id='Route-fold-method-Host-docs' class="fold-docs">
+				Host adds a matcher for the URL host.
+				It accepts a template with zero or more URL variables enclosed by {}.
+				Variables can define an optional regexp pattern to be matched:
+
+				- {name} matches anything until the next dot.
+
+				- {name:pattern} matches the given regexp pattern.
+
+				For example:
+
+				    r := mux.NewRouter()
+				    r.Host("www.example.com")
+				    r.Host("{subdomain}.domain.com")
+				    r.Host("{subdomain:[a-z]+}.domain.com")
+
+				Variable names must be unique in a given route. They can be retrieved
+				calling mux.Vars(request).
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-Match"><label for="Route-fold-method-Match">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-41">Match</a>(req *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>, match *<a href="#name-RouteMatch">RouteMatch</a>) <a href="../../builtin.html#name-bool">bool</a></label><span id='Route-fold-method-Match-docs' class="fold-docs">
+				Match matches the route against the request.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-MatcherFunc"><label for="Route-fold-method-MatcherFunc">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-309">MatcherFunc</a>(f <a href="#name-MatcherFunc">MatcherFunc</a>) *<b>Route</b></label><span id='Route-fold-method-MatcherFunc-docs' class="fold-docs">
+				MatcherFunc adds a custom function to be used as request matcher.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-Methods"><label for="Route-fold-method-Methods">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-325">Methods</a>(methods ...<a href="../../builtin.html#name-string">string</a>) *<b>Route</b></label><span id='Route-fold-method-Methods-docs' class="fold-docs">
+				Methods adds a matcher for HTTP methods.
+				It accepts a sequence of one or more methods to be matched, e.g.:
+				"GET", "POST", "PUT".
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-Name"><label for="Route-fold-method-Name">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-139">Name</a>(name <a href="../../builtin.html#name-string">string</a>) *<b>Route</b></label><span id='Route-fold-method-Name-docs' class="fold-docs">
+				Name sets the name for the route, used to build URLs.
+				It is an error to call Name more than once on a route.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-Path"><label for="Route-fold-method-Path">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-353">Path</a>(tpl <a href="../../builtin.html#name-string">string</a>) *<b>Route</b></label><span id='Route-fold-method-Path-docs' class="fold-docs">
+				Path adds a matcher for the URL path.
+				It accepts a template with zero or more URL variables enclosed by {}. The
+				template must start with a "/".
+				Variables can define an optional regexp pattern to be matched:
+
+				- {name} matches anything until the next slash.
+
+				- {name:pattern} matches the given regexp pattern.
+
+				For example:
+
+				    r := mux.NewRouter()
+				    r.Path("/products/").Handler(ProductsHandler)
+				    r.Path("/products/{key}").Handler(ProductsHandler)
+				    r.Path("/articles/{category}/{id:[0-9]+}").
+				      Handler(ArticleHandler)
+
+				Variable names must be unique in a given route. They can be retrieved
+				calling mux.Vars(request).
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-PathPrefix"><label for="Route-fold-method-PathPrefix">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-369">PathPrefix</a>(tpl <a href="../../builtin.html#name-string">string</a>) *<b>Route</b></label><span id='Route-fold-method-PathPrefix-docs' class="fold-docs">
+				PathPrefix adds a matcher for the URL path prefix. This matches if the given
+				template is a prefix of the full URL path. See Route.Path() for details on
+				the tpl argument.
+
+				Note that it does not treat slashes specially ("/foobar/" will be matched by
+				the prefix "/foo") so you may want to use a trailing slash here.
+
+				Also note that the setting of Router.StrictSlash() has no effect on routes
+				with a PathPrefix matcher.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-Queries"><label for="Route-fold-method-Queries">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-393">Queries</a>(pairs ...<a href="../../builtin.html#name-string">string</a>) *<b>Route</b></label><span id='Route-fold-method-Queries-docs' class="fold-docs">
+				Queries adds a matcher for URL query values.
+				It accepts a sequence of key/value pairs. Values may define variables.
+				For example:
+
+				    r := mux.NewRouter()
+				    r.Queries("foo", "bar", "id", "{id:[0-9]+}")
+
+				The above route will only match if the URL contains the defined queries
+				values, e.g.: ?foo=bar&amp;id=42.
+
+				If the value is an empty string, it will match any value if the key is set.
+
+				Variables can define an optional regexp pattern to be matched:
+
+				- {name} matches anything until the next slash.
+
+				- {name:pattern} matches the given regexp pattern.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-Schemes"><label for="Route-fold-method-Schemes">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-439">Schemes</a>(schemes ...<a href="../../builtin.html#name-string">string</a>) *<b>Route</b></label><span id='Route-fold-method-Schemes-docs' class="fold-docs">
+				Schemes adds a matcher for URL schemes.
+				It accepts a sequence of schemes to be matched, e.g.: "http", "https".
+				If the request's URL has a scheme set, it will be matched against.
+				Generally, the URL scheme will only be set if a previous handler set it,
+				such as the ProxyHeaders handler from gorilla/handlers.
+				If unset, the scheme will be determined based on the request's TLS
+				termination state.
+				The first argument to Schemes will be used when constructing a route URL.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-SkipClean"><label for="Route-fold-method-SkipClean">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-36">SkipClean</a>() <a href="../../builtin.html#name-bool">bool</a></label><span id='Route-fold-method-SkipClean-docs' class="fold-docs">
+				SkipClean reports whether path cleaning is enabled for this route via
+				Router.SkipClean.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-Subrouter"><label for="Route-fold-method-Subrouter">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-484">Subrouter</a>() *<a href="#name-Router">Router</a></label><span id='Route-fold-method-Subrouter-docs' class="fold-docs">
+				Subrouter creates a subrouter for the route.
+
+				It will test the inner routes only if the parent route matched. For example:
+
+				    r := mux.NewRouter()
+				    s := r.Host("www.example.com").Subrouter()
+				    s.HandleFunc("/products/", ProductsHandler)
+				    s.HandleFunc("/products/{key}", ProductHandler)
+				    s.HandleFunc("/articles/{category}/{id:[0-9]+}"), ArticleHandler)
+
+				Here, the routes registered in the subrouter won't be tested if the host
+				doesn't match.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-URL"><label for="Route-fold-method-URL">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-533">URL</a>(pairs ...<a href="../../builtin.html#name-string">string</a>) (*<a href="../../net/url.html">url</a>.<a href="../../net/url.html#name-URL">URL</a>, <a href="../../builtin.html#name-error">error</a>)</label><span id='Route-fold-method-URL-docs' class="fold-docs">
+				URL builds a URL for the route.
+
+				It accepts a sequence of key/value pairs for the route variables. For
+				example, given this route:
+
+				    r := mux.NewRouter()
+				    r.HandleFunc("/articles/{category}/{id:[0-9]+}", ArticleHandler).
+				      Name("article")
+
+				...a URL for it can be built using:
+
+				    url, err := r.Get("article").URL("category", "technology", "id", "42")
+
+				...which will return an url.URL with the following path:
+
+				    "/articles/technology/42"
+
+				This also works for host variables:
+
+				    r := mux.NewRouter()
+				    r.HandleFunc("/articles/{category}/{id:[0-9]+}", ArticleHandler).
+				      Host("{subdomain}.domain.com").
+				      Name("article")
+
+				    // url.String() will be "http://news.domain.com/articles/technology/42"
+				    url, err := r.Get("article").URL("subdomain", "news",
+				                                     "category", "technology",
+				                                     "id", "42")
+
+				The scheme of the resulting url will be the first argument that was passed to Schemes:
+
+				    // url.String() will be "https://example.com"
+				    r := mux.NewRouter()
+				    url, err := r.Host("example.com")
+				                 .Schemes("https", "http").URL()
+
+				All variables defined in the route are required, and their values must
+				conform to the corresponding patterns.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-URLHost"><label for="Route-fold-method-URLHost">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-575">URLHost</a>(pairs ...<a href="../../builtin.html#name-string">string</a>) (*<a href="../../net/url.html">url</a>.<a href="../../net/url.html#name-URL">URL</a>, <a href="../../builtin.html#name-error">error</a>)</label><span id='Route-fold-method-URLHost-docs' class="fold-docs">
+				URLHost builds the host part of the URL for a route. See Route.URL().
+
+				The route must have a host defined.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Route-fold-method-URLPath"><label for="Route-fold-method-URLPath">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-603">URLPath</a>(pairs ...<a href="../../builtin.html#name-string">string</a>) (*<a href="../../net/url.html">url</a>.<a href="../../net/url.html#name-URL">URL</a>, <a href="../../builtin.html#name-error">error</a>)</label><span id='Route-fold-method-URLPath-docs' class="fold-docs">
+				URLPath builds the path part of the URL for a route. See Route.URL().
+
+				The route must have a path defined.
+</span></span>
+			<input type='checkbox' class="showhide" id="Route-showhide-methods"><i><label for="Route-showhide-methods" class="show-inline">/* 4 unexporteds ... */</label><label for="Route-showhide-methods" class="hide-inline">/* 4 unexporteds: */</label></i><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Route-fold-method-addMatcher"><label for="Route-fold-method-addMatcher">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-166">addMatcher</a>(m <a href="#name-matcher">matcher</a>) *<b>Route</b></label><span id='Route-fold-method-addMatcher-docs' class="fold-docs">
+				addMatcher adds a matcher to the route.
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Route-fold-method-addRegexpMatcher"><label for="Route-fold-method-addRegexpMatcher">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-174">addRegexpMatcher</a>(tpl <a href="../../builtin.html#name-string">string</a>, typ <a href="#name-regexpType">regexpType</a>) <a href="../../builtin.html#name-error">error</a></label><span id='Route-fold-method-addRegexpMatcher-docs' class="fold-docs">
+				addRegexpMatcher adds a host or path matcher and builder to a route.
+</span></i></span><span class="hidden"><i>
+			<span class="nodocs">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-731">buildVars</a>(m map[<a href="../../builtin.html#name-string">string</a>]<a href="../../builtin.html#name-string">string</a>) map[<a href="../../builtin.html#name-string">string</a>]<a href="../../builtin.html#name-string">string</a></span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Route-fold-method-prepareVars"><label for="Route-fold-method-prepareVars">(*T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-723">prepareVars</a>(pairs ...<a href="../../builtin.html#name-string">string</a>) (map[<a href="../../builtin.html#name-string">string</a>]<a href="../../builtin.html#name-string">string</a>, <a href="../../builtin.html#name-error">error</a>)</label><span id='Route-fold-method-prepareVars-docs' class="fold-docs">
+				prepareVars converts the route variable pairs into a map. If the route has a
+				BuildVarsFunc, it is invoked.
+</span></i></span></span>
+		<input type='checkbox' class="fold" id="Route-fold-impls"><label for="Route-fold-impls">Implements (<i>at least one unexported</i>)</label><span id='Route-fold-impls-items' class="fold-items">
+			<input type='checkbox' class="showhide" id="Route-showhide-impls"><i><label for="Route-showhide-impls" class="show-inline">/* at least one unexported ... */</label><label for="Route-showhide-impls" class="hide-inline">/* at least one unexported: */</label></i><span class="hidden"><i>
+			*T : <a href="#name-matcher">matcher</a></i></span></span>
+		<input type='checkbox' class="fold" id="Route-fold-results"><label for="Route-fold-results">As Outputs Of (<i>at least 31, in which 30 are exported</i>)</label><span id='Route-fold-results-items' class="fold-items"><span>
+			func <a href="#name-CurrentRoute">CurrentRoute</a>(r *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>) *<b>Route</b></span><span>
+			func (*Route).<a href="../../../src/github.com/gorilla/mux/route.go.html#line-110">BuildOnly</a>() *<b>Route</b></span><span>
+			func (*Route).<a href="../../../src/github.com/gorilla/mux/route.go.html#line-457">BuildVarsFunc</a>(f <a href="#name-BuildVarsFunc">BuildVarsFunc</a>) *<b>Route</b></span><span>
+			func (*Route).<a href="../../../src/github.com/gorilla/mux/route.go.html#line-118">Handler</a>(handler <a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Handler">Handler</a>) *<b>Route</b></span><span>
+			func (*Route).<a href="../../../src/github.com/gorilla/mux/route.go.html#line-126">HandlerFunc</a>(f func(<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-ResponseWriter">ResponseWriter</a>, *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>)) *<b>Route</b></span><span>
+			func (*Route).<a href="../../../src/github.com/gorilla/mux/route.go.html#line-239">Headers</a>(pairs ...<a href="../../builtin.html#name-string">string</a>) *<b>Route</b></span><span>
+			func (*Route).<a href="../../../src/github.com/gorilla/mux/route.go.html#line-265">HeadersRegexp</a>(pairs ...<a href="../../builtin.html#name-string">string</a>) *<b>Route</b></span><span>
+			func (*Route).<a href="../../../src/github.com/gorilla/mux/route.go.html#line-293">Host</a>(tpl <a href="../../builtin.html#name-string">string</a>) *<b>Route</b></span><span>
+			func (*Route).<a href="../../../src/github.com/gorilla/mux/route.go.html#line-309">MatcherFunc</a>(f <a href="#name-MatcherFunc">MatcherFunc</a>) *<b>Route</b></span><span>
+			func (*Route).<a href="../../../src/github.com/gorilla/mux/route.go.html#line-325">Methods</a>(methods ...<a href="../../builtin.html#name-string">string</a>) *<b>Route</b></span><span>
+			func (*Route).<a href="../../../src/github.com/gorilla/mux/route.go.html#line-139">Name</a>(name <a href="../../builtin.html#name-string">string</a>) *<b>Route</b></span><span>
+			func (*Route).<a href="../../../src/github.com/gorilla/mux/route.go.html#line-353">Path</a>(tpl <a href="../../builtin.html#name-string">string</a>) *<b>Route</b></span><span>
+			func (*Route).<a href="../../../src/github.com/gorilla/mux/route.go.html#line-369">PathPrefix</a>(tpl <a href="../../builtin.html#name-string">string</a>) *<b>Route</b></span><span>
+			func (*Route).<a href="../../../src/github.com/gorilla/mux/route.go.html#line-393">Queries</a>(pairs ...<a href="../../builtin.html#name-string">string</a>) *<b>Route</b></span><span>
+			func (*Route).<a href="../../../src/github.com/gorilla/mux/route.go.html#line-439">Schemes</a>(schemes ...<a href="../../builtin.html#name-string">string</a>) *<b>Route</b></span><span>
+			func (*<a href="#name-Router">Router</a>).<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-353">BuildVarsFunc</a>(f <a href="#name-BuildVarsFunc">BuildVarsFunc</a>) *<b>Route</b></span><span>
+			func (*<a href="#name-Router">Router</a>).<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-214">Get</a>(name <a href="../../builtin.html#name-string">string</a>) *<b>Route</b></span><span>
+			func (*<a href="#name-Router">Router</a>).<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-220">GetRoute</a>(name <a href="../../builtin.html#name-string">string</a>) *<b>Route</b></span><span>
+			func (*<a href="#name-Router">Router</a>).<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-292">Handle</a>(path <a href="../../builtin.html#name-string">string</a>, handler <a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Handler">Handler</a>) *<b>Route</b></span><span>
+			func (*<a href="#name-Router">Router</a>).<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-298">HandleFunc</a>(path <a href="../../builtin.html#name-string">string</a>, f func(<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-ResponseWriter">ResponseWriter</a>, *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>)) *<b>Route</b></span><span>
+			func (*<a href="#name-Router">Router</a>).<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-305">Headers</a>(pairs ...<a href="../../builtin.html#name-string">string</a>) *<b>Route</b></span><span>
+			func (*<a href="#name-Router">Router</a>).<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-311">Host</a>(tpl <a href="../../builtin.html#name-string">string</a>) *<b>Route</b></span><span>
+			func (*<a href="#name-Router">Router</a>).<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-317">MatcherFunc</a>(f <a href="#name-MatcherFunc">MatcherFunc</a>) *<b>Route</b></span><span>
+			func (*<a href="#name-Router">Router</a>).<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-323">Methods</a>(methods ...<a href="../../builtin.html#name-string">string</a>) *<b>Route</b></span><span>
+			func (*<a href="#name-Router">Router</a>).<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-286">Name</a>(name <a href="../../builtin.html#name-string">string</a>) *<b>Route</b></span><span>
+			func (*<a href="#name-Router">Router</a>).<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-277">NewRoute</a>() *<b>Route</b></span><span>
+			func (*<a href="#name-Router">Router</a>).<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-329">Path</a>(tpl <a href="../../builtin.html#name-string">string</a>) *<b>Route</b></span><span>
+			func (*<a href="#name-Router">Router</a>).<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-335">PathPrefix</a>(tpl <a href="../../builtin.html#name-string">string</a>) *<b>Route</b></span><span>
+			func (*<a href="#name-Router">Router</a>).<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-341">Queries</a>(pairs ...<a href="../../builtin.html#name-string">string</a>) *<b>Route</b></span><span>
+			func (*<a href="#name-Router">Router</a>).<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-347">Schemes</a>(schemes ...<a href="../../builtin.html#name-string">string</a>) *<b>Route</b></span>
+			<input type='checkbox' class="showhide" id="Route-showhide-inputofs"><i><label for="Route-showhide-inputofs" class="show-inline">/* at least one unexported ... */</label><label for="Route-showhide-inputofs" class="hide-inline">/* at least one unexported: */</label></i><span class="hidden"><i>
+			func (*Route).<a href="../../../src/github.com/gorilla/mux/route.go.html#line-166">addMatcher</a>(m <a href="#name-matcher">matcher</a>) *<b>Route</b></i></span></span>
+		<input type='checkbox' class="fold" id="Route-fold-params"><label for="Route-fold-params">As Inputs Of (<i>at least 2, neither is exported</i>)</label><span id='Route-fold-params-items' class="fold-items">
+			<input type='checkbox' class="showhide" id="Route-showhide-outputofs"><i><label for="Route-showhide-outputofs" class="show-inline">/* 2+ unexporteds ... */</label><label for="Route-showhide-outputofs" class="hide-inline">/* 2+ unexporteds: */</label></i><span class="hidden"><i>
+			func <a href="#name-requestWithRoute">requestWithRoute</a>(r *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>, route *<b>Route</b>) *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a></i></span><span class="hidden"><i>
+			func (*<a href="#name-Router">Router</a>).<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-373">walk</a>(walkFn <a href="#name-WalkFunc">WalkFunc</a>, ancestors []*<b>Route</b>) <a href="../../builtin.html#name-error">error</a></i></span></span>
+
+</span></div><div class="anchor type-res" id="name-RouteMatch" data-popularity="105">	<input type='checkbox' class="fold" id="RouteMatch-fold-content"><label for="RouteMatch-fold-content"> type <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-409">RouteMatch</a> <i>(struct)</i></label><span id='RouteMatch-fold-content-docs' class="fold-docs">
+		RouteMatch stores information about a matched route.
+
+		<input type='checkbox' class="fold" id="RouteMatch-fold-fields"><label for="RouteMatch-fold-fields">Fields (<i>total 4, all are exported</i>)</label><span id='RouteMatch-fold-fields-items' class="fold-items"><span>
+			<span class="nodocs"><a href="../../../src/github.com/gorilla/mux/mux.go.html#line-411">Handler</a> <i><a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Handler">Handler</a></i></span></span><span>
+			<input type='checkbox' class="fold" id="RouteMatch-fold-field-MatchErr"><label for="RouteMatch-fold-field-MatchErr"><a href="../../../src/github.com/gorilla/mux/mux.go.html#line-417">MatchErr</a> <i><a href="../../builtin.html#name-error">error</a></i></label><span id='RouteMatch-fold-field-MatchErr-docs' class="fold-docs">
+				MatchErr is set to appropriate matching error
+				It is set to ErrMethodMismatch if there is a mismatch in
+				the request method and route method
+</span></span><span>
+			<span class="nodocs"><a href="../../../src/github.com/gorilla/mux/mux.go.html#line-410">Route</a> <i>*<a href="#name-Route">Route</a></i></span></span><span>
+			<span class="nodocs"><a href="../../../src/github.com/gorilla/mux/mux.go.html#line-412">Vars</a> <i>map[<a href="../../builtin.html#name-string">string</a>]<a href="../../builtin.html#name-string">string</a></i></span></span></span>
+		<input type='checkbox' class="fold" id="RouteMatch-fold-params"><label for="RouteMatch-fold-params">As Inputs Of (<i>at least 3, all are exported</i>)</label><span id='RouteMatch-fold-params-items' class="fold-items"><span>
+			func <a href="#name-MatcherFunc">MatcherFunc</a>.<a href="../../../src/github.com/gorilla/mux/route.go.html#line-304">Match</a>(r *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>, match *<b>RouteMatch</b>) <a href="../../builtin.html#name-bool">bool</a></span><span>
+			func (*<a href="#name-Route">Route</a>).<a href="../../../src/github.com/gorilla/mux/route.go.html#line-41">Match</a>(req *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>, match *<b>RouteMatch</b>) <a href="../../builtin.html#name-bool">bool</a></span><span>
+			func (*<a href="#name-Router">Router</a>).<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-136">Match</a>(req *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>, match *<b>RouteMatch</b>) <a href="../../builtin.html#name-bool">bool</a></span></span>
+
+</span></div><div class="anchor type-res" id="name-Router" data-popularity="1745">	<input type='checkbox' class="fold" id="Router-fold-content"><label for="Router-fold-content"> type <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-47">Router</a> <i>(struct)</i></label><span id='Router-fold-content-docs' class="fold-docs">
+		Router registers routes to be matched and dispatches a handler.
+
+		It implements the http.Handler interface, so it can be registered to serve
+		requests:
+
+		    var router = mux.NewRouter()
+
+		    func main() {
+		        http.Handle("/", router)
+		    }
+
+		Or, for Google App Engine, register it in a init() function:
+
+		    func init() {
+		        http.Handle("/", router)
+		    }
+
+		This will send all incoming requests to the router.
+
+		<input type='checkbox' class="fold" id="Router-fold-fields"><label for="Router-fold-fields">Fields (<i>total 14, in which 3 are exported</i>)</label><span id='Router-fold-fields-items' class="fold-items"><span>
+			<input type='checkbox' class="fold" id="Router-fold-field-KeepContext"><label for="Router-fold-field-KeepContext"><a href="../../../src/github.com/gorilla/mux/mux.go.html#line-63">KeepContext</a> <i><a href="../../builtin.html#name-bool">bool</a></i></label><span id='Router-fold-field-KeepContext-docs' class="fold-docs">
+				If true, do not clear the request context after handling the request.
+
+				Deprecated: No effect, since the context is stored on the request itself.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Router-fold-field-MethodNotAllowedHandler"><label for="Router-fold-field-MethodNotAllowedHandler"><a href="../../../src/github.com/gorilla/mux/mux.go.html#line-52">MethodNotAllowedHandler</a> <i><a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Handler">Handler</a></i></label><span id='Router-fold-field-MethodNotAllowedHandler-docs' class="fold-docs">
+				Configurable Handler to be used when the request method does not match the route.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Router-fold-field-NotFoundHandler"><label for="Router-fold-field-NotFoundHandler"><a href="../../../src/github.com/gorilla/mux/mux.go.html#line-49">NotFoundHandler</a> <i><a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Handler">Handler</a></i></label><span id='Router-fold-field-NotFoundHandler-docs' class="fold-docs">
+				Configurable Handler to be used when no route matches.
+</span></span>
+			<input type='checkbox' class="showhide" id="Router-showhide-fields"><i><label for="Router-showhide-fields" class="show-inline">/* 11 unexporteds ... */</label><label for="Router-showhide-fields" class="hide-inline">/* 11 unexporteds: */</label></i><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Router-fold-field-middlewares"><label for="Router-fold-field-middlewares"><a href="../../../src/github.com/gorilla/mux/mux.go.html#line-66">middlewares</a> <i>[]<a href="#name-middleware">middleware</a></i></label><span id='Router-fold-field-middlewares-docs' class="fold-docs">
+				Slice of middlewares to be called after a match is found
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Router-fold-field-namedRoutes"><label for="Router-fold-field-namedRoutes"><a href="../../../src/github.com/gorilla/mux/mux.go.html#line-58">namedRoutes</a> <i>map[<a href="../../builtin.html#name-string">string</a>]*<a href="#name-Route">Route</a></i></label><span id='Router-fold-field-namedRoutes-docs' class="fold-docs">
+				Routes by name for URL building.
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Router-fold-field-routeConf"><label for="Router-fold-field-routeConf"><a href="../../../src/github.com/gorilla/mux/mux.go.html#line-69">routeConf</a> <i><a href="#name-routeConf">routeConf</a></i></label><span id='Router-fold-field-routeConf-docs' class="fold-docs">
+				configuration shared with `Route`
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Router-fold-field-buildScheme"><label for="Router-fold-field-buildScheme"><a href="../../../src/github.com/gorilla/mux/mux.go.html#line-69" class="path-duplicate">routeConf</a>.<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-92">buildScheme</a> <i><a href="../../builtin.html#name-string">string</a></i></label><span id='Router-fold-field-buildScheme-docs' class="fold-docs">
+				The scheme used when building URLs.
+</span></i></span><span class="hidden"><i>
+			<span class="nodocs"><a href="../../../src/github.com/gorilla/mux/mux.go.html#line-69" class="path-duplicate">routeConf</a>.<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-94">buildVarsFunc</a> <i><a href="#name-BuildVarsFunc">BuildVarsFunc</a></i></span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Router-fold-field-matchers"><label for="Router-fold-field-matchers"><a href="../../../src/github.com/gorilla/mux/mux.go.html#line-69" class="path-duplicate">routeConf</a>.<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-89">matchers</a> <i>[]<a href="#name-matcher">matcher</a></i></label><span id='Router-fold-field-matchers-docs' class="fold-docs">
+				List of matchers.
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Router-fold-field-regexp"><label for="Router-fold-field-regexp"><a href="../../../src/github.com/gorilla/mux/mux.go.html#line-69" class="path-duplicate">routeConf</a>.<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-86">regexp</a> <i><a href="#name-routeRegexpGroup">routeRegexpGroup</a></i></label><span id='Router-fold-field-regexp-docs' class="fold-docs">
+				Manager for the variables from host and path.
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Router-fold-field-skipClean"><label for="Router-fold-field-skipClean"><a href="../../../src/github.com/gorilla/mux/mux.go.html#line-69" class="path-duplicate">routeConf</a>.<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-83">skipClean</a> <i><a href="../../builtin.html#name-bool">bool</a></i></label><span id='Router-fold-field-skipClean-docs' class="fold-docs">
+				If true, when the path pattern is "/path//to", accessing "/path//to"
+				will not redirect
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Router-fold-field-strictSlash"><label for="Router-fold-field-strictSlash"><a href="../../../src/github.com/gorilla/mux/mux.go.html#line-69" class="path-duplicate">routeConf</a>.<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-79">strictSlash</a> <i><a href="../../builtin.html#name-bool">bool</a></i></label><span id='Router-fold-field-strictSlash-docs' class="fold-docs">
+				If true, when the path pattern is "/path/", accessing "/path" will
+				redirect to the former and vice versa.
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Router-fold-field-useEncodedPath"><label for="Router-fold-field-useEncodedPath"><a href="../../../src/github.com/gorilla/mux/mux.go.html#line-69" class="path-duplicate">routeConf</a>.<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-75">useEncodedPath</a> <i><a href="../../builtin.html#name-bool">bool</a></i></label><span id='Router-fold-field-useEncodedPath-docs' class="fold-docs">
+				If true, "/path/foo%2Fbar/to" will match the path "/path/{var}/to"
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Router-fold-field-routes"><label for="Router-fold-field-routes"><a href="../../../src/github.com/gorilla/mux/mux.go.html#line-55">routes</a> <i>[]*<a href="#name-Route">Route</a></i></label><span id='Router-fold-field-routes-docs' class="fold-docs">
+				Routes to be matched, in order.
+</span></i></span></span>
+		<input type='checkbox' class="fold" id="Router-fold-methods"><label for="Router-fold-methods">Methods (<i>total 24, in which 22 are exported</i>)</label><span id='Router-fold-methods-items' class="fold-items"><span>
+			<input type='checkbox' class="fold" id="Router-fold-method-BuildVarsFunc"><label for="Router-fold-method-BuildVarsFunc">(*T) <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-353">BuildVarsFunc</a>(f <a href="#name-BuildVarsFunc">BuildVarsFunc</a>) *<a href="#name-Route">Route</a></label><span id='Router-fold-method-BuildVarsFunc-docs' class="fold-docs">
+				BuildVarsFunc registers a new route with a custom function for modifying
+				route variables before building a URL.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Router-fold-method-Get"><label for="Router-fold-method-Get">(*T) <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-214">Get</a>(name <a href="../../builtin.html#name-string">string</a>) *<a href="#name-Route">Route</a></label><span id='Router-fold-method-Get-docs' class="fold-docs">
+				Get returns a route registered with the given name.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Router-fold-method-GetRoute"><label for="Router-fold-method-GetRoute">(*T) <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-220">GetRoute</a>(name <a href="../../builtin.html#name-string">string</a>) *<a href="#name-Route">Route</a></label><span id='Router-fold-method-GetRoute-docs' class="fold-docs">
+				GetRoute returns a route registered with the given name. This method
+				was renamed to Get() and remains here for backwards compatibility.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Router-fold-method-Handle"><label for="Router-fold-method-Handle">(*T) <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-292">Handle</a>(path <a href="../../builtin.html#name-string">string</a>, handler <a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Handler">Handler</a>) *<a href="#name-Route">Route</a></label><span id='Router-fold-method-Handle-docs' class="fold-docs">
+				Handle registers a new route with a matcher for the URL path.
+				See Route.Path() and Route.Handler().
+</span></span><span>
+			<input type='checkbox' class="fold" id="Router-fold-method-HandleFunc"><label for="Router-fold-method-HandleFunc">(*T) <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-298">HandleFunc</a>(path <a href="../../builtin.html#name-string">string</a>, f func(<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-ResponseWriter">ResponseWriter</a>, *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>)) *<a href="#name-Route">Route</a></label><span id='Router-fold-method-HandleFunc-docs' class="fold-docs">
+				HandleFunc registers a new route with a matcher for the URL path.
+				See Route.Path() and Route.HandlerFunc().
+</span></span><span>
+			<input type='checkbox' class="fold" id="Router-fold-method-Headers"><label for="Router-fold-method-Headers">(*T) <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-305">Headers</a>(pairs ...<a href="../../builtin.html#name-string">string</a>) *<a href="#name-Route">Route</a></label><span id='Router-fold-method-Headers-docs' class="fold-docs">
+				Headers registers a new route with a matcher for request header values.
+				See Route.Headers().
+</span></span><span>
+			<input type='checkbox' class="fold" id="Router-fold-method-Host"><label for="Router-fold-method-Host">(*T) <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-311">Host</a>(tpl <a href="../../builtin.html#name-string">string</a>) *<a href="#name-Route">Route</a></label><span id='Router-fold-method-Host-docs' class="fold-docs">
+				Host registers a new route with a matcher for the URL host.
+				See Route.Host().
+</span></span><span>
+			<input type='checkbox' class="fold" id="Router-fold-method-Match"><label for="Router-fold-method-Match">(*T) <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-136">Match</a>(req *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>, match *<a href="#name-RouteMatch">RouteMatch</a>) <a href="../../builtin.html#name-bool">bool</a></label><span id='Router-fold-method-Match-docs' class="fold-docs">
+				Match attempts to match the given request against the router's registered routes.
+
+				If the request matches a route of this router or one of its subrouters the Route,
+				Handler, and Vars fields of the the match argument are filled and this function
+				returns true.
+
+				If the request does not match any of this router's or its subrouters' routes
+				then this function returns false. If available, a reason for the match failure
+				will be filled in the match argument's MatchErr field. If the match failure type
+				(eg: not found) has a registered handler, the handler is assigned to the Handler
+				field of the match argument.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Router-fold-method-MatcherFunc"><label for="Router-fold-method-MatcherFunc">(*T) <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-317">MatcherFunc</a>(f <a href="#name-MatcherFunc">MatcherFunc</a>) *<a href="#name-Route">Route</a></label><span id='Router-fold-method-MatcherFunc-docs' class="fold-docs">
+				MatcherFunc registers a new route with a custom matcher function.
+				See Route.MatcherFunc().
+</span></span><span>
+			<input type='checkbox' class="fold" id="Router-fold-method-Methods"><label for="Router-fold-method-Methods">(*T) <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-323">Methods</a>(methods ...<a href="../../builtin.html#name-string">string</a>) *<a href="#name-Route">Route</a></label><span id='Router-fold-method-Methods-docs' class="fold-docs">
+				Methods registers a new route with a matcher for HTTP methods.
+				See Route.Methods().
+</span></span><span>
+			<input type='checkbox' class="fold" id="Router-fold-method-Name"><label for="Router-fold-method-Name">(*T) <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-286">Name</a>(name <a href="../../builtin.html#name-string">string</a>) *<a href="#name-Route">Route</a></label><span id='Router-fold-method-Name-docs' class="fold-docs">
+				Name registers a new route with a name.
+				See Route.Name().
+</span></span><span>
+			<input type='checkbox' class="fold" id="Router-fold-method-NewRoute"><label for="Router-fold-method-NewRoute">(*T) <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-277">NewRoute</a>() *<a href="#name-Route">Route</a></label><span id='Router-fold-method-NewRoute-docs' class="fold-docs">
+				NewRoute registers an empty route.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Router-fold-method-Path"><label for="Router-fold-method-Path">(*T) <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-329">Path</a>(tpl <a href="../../builtin.html#name-string">string</a>) *<a href="#name-Route">Route</a></label><span id='Router-fold-method-Path-docs' class="fold-docs">
+				Path registers a new route with a matcher for the URL path.
+				See Route.Path().
+</span></span><span>
+			<input type='checkbox' class="fold" id="Router-fold-method-PathPrefix"><label for="Router-fold-method-PathPrefix">(*T) <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-335">PathPrefix</a>(tpl <a href="../../builtin.html#name-string">string</a>) *<a href="#name-Route">Route</a></label><span id='Router-fold-method-PathPrefix-docs' class="fold-docs">
+				PathPrefix registers a new route with a matcher for the URL path prefix.
+				See Route.PathPrefix().
+</span></span><span>
+			<input type='checkbox' class="fold" id="Router-fold-method-Queries"><label for="Router-fold-method-Queries">(*T) <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-341">Queries</a>(pairs ...<a href="../../builtin.html#name-string">string</a>) *<a href="#name-Route">Route</a></label><span id='Router-fold-method-Queries-docs' class="fold-docs">
+				Queries registers a new route with a matcher for URL query values.
+				See Route.Queries().
+</span></span><span>
+			<input type='checkbox' class="fold" id="Router-fold-method-Schemes"><label for="Router-fold-method-Schemes">(*T) <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-347">Schemes</a>(schemes ...<a href="../../builtin.html#name-string">string</a>) *<a href="#name-Route">Route</a></label><span id='Router-fold-method-Schemes-docs' class="fold-docs">
+				Schemes registers a new route with a matcher for URL schemes.
+				See Route.Schemes().
+</span></span><span>
+			<input type='checkbox' class="fold" id="Router-fold-method-ServeHTTP"><label for="Router-fold-method-ServeHTTP">(*T) <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-173">ServeHTTP</a>(w <a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-ResponseWriter">ResponseWriter</a>, req *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>)</label><span id='Router-fold-method-ServeHTTP-docs' class="fold-docs">
+				ServeHTTP dispatches the handler registered in the matched route.
+
+				When there is a match, the route variables can be retrieved calling
+				mux.Vars(request).
+</span></span><span>
+			<input type='checkbox' class="fold" id="Router-fold-method-SkipClean"><label for="Router-fold-method-SkipClean">(*T) <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-256">SkipClean</a>(value <a href="../../builtin.html#name-bool">bool</a>) *<b>Router</b></label><span id='Router-fold-method-SkipClean-docs' class="fold-docs">
+				SkipClean defines the path cleaning behaviour for new routes. The initial
+				value is false. Users should be careful about which routes are not cleaned
+
+				When true, if the route path is "/path//to", it will remain with the double
+				slash. This is helpful if you have a route like: /fetch/http://xkcd.com/534/
+
+				When false, the path will be cleaned, so /fetch/http://xkcd.com/534/ will
+				become /fetch/http/xkcd.com/534
+</span></span><span>
+			<input type='checkbox' class="fold" id="Router-fold-method-StrictSlash"><label for="Router-fold-method-StrictSlash">(*T) <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-243">StrictSlash</a>(value <a href="../../builtin.html#name-bool">bool</a>) *<b>Router</b></label><span id='Router-fold-method-StrictSlash-docs' class="fold-docs">
+				StrictSlash defines the trailing slash behavior for new routes. The initial
+				value is false.
+
+				When true, if the route path is "/path/", accessing "/path" will perform a redirect
+				to the former and vice versa. In other words, your application will always
+				see the path as specified in the route.
+
+				When false, if the route path is "/path", accessing "/path/" will not match
+				this route and vice versa.
+
+				The re-direct is a HTTP 301 (Moved Permanently). Note that when this is set for
+				routes with a non-idempotent method (e.g. POST, PUT), the subsequent re-directed
+				request will be made as a GET by most clients. Use middleware or client settings
+				to modify this behaviour as needed.
+
+				Special case: when a route sets a path prefix using the PathPrefix() method,
+				strict slash is ignored for that route because the redirect behavior can't
+				be determined from a prefix alone. However, any subrouters created from that
+				route inherit the original StrictSlash setting.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Router-fold-method-Use"><label for="Router-fold-method-Use">(*T) <a href="../../../src/github.com/gorilla/mux/middleware.go.html#line-24">Use</a>(mwf ...<a href="#name-MiddlewareFunc">MiddlewareFunc</a>)</label><span id='Router-fold-method-Use-docs' class="fold-docs">
+				Use appends a MiddlewareFunc to the chain. Middleware can be used to intercept or otherwise modify requests and/or responses, and are executed in the order that they are applied to the Router.
+</span></span><span>
+			<input type='checkbox' class="fold" id="Router-fold-method-UseEncodedPath"><label for="Router-fold-method-UseEncodedPath">(*T) <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-267">UseEncodedPath</a>() *<b>Router</b></label><span id='Router-fold-method-UseEncodedPath-docs' class="fold-docs">
+				UseEncodedPath tells the router to match the encoded original path
+				to the routes.
+				For eg. "/path/foo%2Fbar/to" will match the path "/path/{var}/to".
+
+				If not called, the router will match the unencoded path to the routes.
+				For eg. "/path/foo%2Fbar/to" will match the path "/path/foo/bar/to"
+</span></span><span>
+			<input type='checkbox' class="fold" id="Router-fold-method-Walk"><label for="Router-fold-method-Walk">(*T) <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-360">Walk</a>(walkFn <a href="#name-WalkFunc">WalkFunc</a>) <a href="../../builtin.html#name-error">error</a></label><span id='Router-fold-method-Walk-docs' class="fold-docs">
+				Walk walks the router and all its sub-routers, calling walkFn for each route
+				in the tree. The routes are walked in the order they were added. Sub-routers
+				are explored depth-first.
+</span></span>
+			<input type='checkbox' class="showhide" id="Router-showhide-methods"><i><label for="Router-showhide-methods" class="show-inline">/* 2 unexporteds ... */</label><label for="Router-showhide-methods" class="hide-inline">/* 2 unexporteds: */</label></i><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="Router-fold-method-useInterface"><label for="Router-fold-method-useInterface">(*T) <a href="../../../src/github.com/gorilla/mux/middleware.go.html#line-31">useInterface</a>(mw <a href="#name-middleware">middleware</a>)</label><span id='Router-fold-method-useInterface-docs' class="fold-docs">
+				useInterface appends a middleware to the chain. Middleware can be used to intercept or otherwise modify requests and/or responses, and are executed in the order that they are applied to the Router.
+</span></i></span><span class="hidden"><i>
+			<span class="nodocs">(*T) <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-373">walk</a>(walkFn <a href="#name-WalkFunc">WalkFunc</a>, ancestors []*<a href="#name-Route">Route</a>) <a href="../../builtin.html#name-error">error</a></span></i></span></span>
+		<input type='checkbox' class="fold" id="Router-fold-impls"><label for="Router-fold-impls">Implements (<i>at least 2, in which 1 are exported</i>)</label><span id='Router-fold-impls-items' class="fold-items"><span>
+			*T : net/http.<a href="../../net/http.html#name-Handler">Handler</a></span>
+			<input type='checkbox' class="showhide" id="Router-showhide-impls"><i><label for="Router-showhide-impls" class="show-inline">/* at least one unexported ... */</label><label for="Router-showhide-impls" class="hide-inline">/* at least one unexported: */</label></i><span class="hidden"><i>
+			*T : <a href="#name-matcher">matcher</a></i></span></span>
+		<input type='checkbox' class="fold" id="Router-fold-results"><label for="Router-fold-results">As Outputs Of (<i>at least 5, all are exported</i>)</label><span id='Router-fold-results-items' class="fold-items"><span>
+			func <a href="#name-NewRouter">NewRouter</a>() *<b>Router</b></span><span>
+			func (*<a href="#name-Route">Route</a>).<a href="../../../src/github.com/gorilla/mux/route.go.html#line-484">Subrouter</a>() *<b>Router</b></span><span>
+			func (*Router).<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-256">SkipClean</a>(value <a href="../../builtin.html#name-bool">bool</a>) *<b>Router</b></span><span>
+			func (*Router).<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-243">StrictSlash</a>(value <a href="../../builtin.html#name-bool">bool</a>) *<b>Router</b></span><span>
+			func (*Router).<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-267">UseEncodedPath</a>() *<b>Router</b></span></span>
+		<input type='checkbox' class="fold" id="Router-fold-params"><label for="Router-fold-params">As Inputs Of (<i>at least 2, in which 1 are exported</i>)</label><span id='Router-fold-params-items' class="fold-items"><span>
+			func <a href="#name-CORSMethodMiddleware">CORSMethodMiddleware</a>(r *<b>Router</b>) <a href="#name-MiddlewareFunc">MiddlewareFunc</a></span>
+			<input type='checkbox' class="showhide" id="Router-showhide-outputofs"><i><label for="Router-showhide-outputofs" class="show-inline">/* at least one unexported ... */</label><label for="Router-showhide-outputofs" class="hide-inline">/* at least one unexported: */</label></i><span class="hidden"><i>
+			func <a href="#name-getAllMethodsForRoute">getAllMethodsForRoute</a>(r *<b>Router</b>, req *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>) ([]<a href="../../builtin.html#name-string">string</a>, <a href="../../builtin.html#name-error">error</a>)</i></span></span>
+
+</span></div><div class="anchor type-res" id="name-WalkFunc" data-popularity="70">	<input type='checkbox' class="fold" id="WalkFunc-fold-content"><label for="WalkFunc-fold-content"> type <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-371">WalkFunc</a> <i>(func)</i></label><span id='WalkFunc-fold-content-docs' class="fold-docs">
+		WalkFunc is the type of the function called for each route visited by Walk.
+		At every invocation, it is given the current route, and the current router,
+		and a list of ancestor routes that lead to the current route.
+
+		<input type='checkbox' class="fold" id="WalkFunc-fold-params"><label for="WalkFunc-fold-params">As Inputs Of (<i>at least 2, in which 1 are exported</i>)</label><span id='WalkFunc-fold-params-items' class="fold-items"><span>
+			func (*<a href="#name-Router">Router</a>).<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-360">Walk</a>(walkFn <b>WalkFunc</b>) <a href="../../builtin.html#name-error">error</a></span>
+			<input type='checkbox' class="showhide" id="WalkFunc-showhide-outputofs"><i><label for="WalkFunc-showhide-outputofs" class="show-inline">/* at least one unexported ... */</label><label for="WalkFunc-showhide-outputofs" class="hide-inline">/* at least one unexported: */</label></i><span class="hidden"><i>
+			func (*<a href="#name-Router">Router</a>).<a href="../../../src/github.com/gorilla/mux/mux.go.html#line-373">walk</a>(walkFn <b>WalkFunc</b>, ancestors []*<a href="#name-Route">Route</a>) <a href="../../builtin.html#name-error">error</a></i></span></span>
+
+</span></div></div><div>	<input type='checkbox' class="showhide" id="unexported-typenames-showhide"><i><label for="unexported-typenames-showhide" class="show-inline">/* 12 unexporteds ... */</label><label for="unexported-typenames-showhide" class="hide-inline">/* 12 unexporteds: */</label></i><div class="anchor type-res hidden" id="name-contextKey" data-popularity="10">	<input type='checkbox' class="fold" id="contextKey-fold-content"><label for="contextKey-fold-content"> type <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-420">contextKey</a> <a href="../../builtin.html#name-int">int</a> <i>(basic type)</i></label><span id='contextKey-fold-content-docs' class="fold-docs">
+
+		<input type='checkbox' class="fold" id="contextKey-fold-values"><label for="contextKey-fold-values">As Types Of (<i>total 2, neither is exported</i>)</label><span id='contextKey-fold-values-items' class="fold-items">
+			<input type='checkbox' checked class="showhide" id="contextKey-showhide-values"><i><label for="contextKey-showhide-values" class="show-inline">/* 2 unexporteds ... */</label><label for="contextKey-showhide-values" class="hide-inline">/* 2 unexporteds: */</label></i><span class="hidden"><i>
+			const <a href="#name-routeKey">routeKey</a></i></span><span class="hidden"><i>
+			const <a href="#name-varsKey">varsKey</a></i></span></span>
+
+</span></div><div class="anchor type-res hidden" id="name-headerMatcher" data-popularity="100">	<input type='checkbox' class="fold" id="headerMatcher-fold-content"><label for="headerMatcher-fold-content"> type <a href="../../../src/github.com/gorilla/mux/route.go.html#line-224">headerMatcher</a> <i>(map)</i></label><span id='headerMatcher-fold-content-docs' class="fold-docs">
+		headerMatcher matches the request against header values.
+
+		<input type='checkbox' class="fold" id="headerMatcher-fold-methods"><label for="headerMatcher-fold-methods">Methods (<i>only one, which is exported</i>)</label><span id='headerMatcher-fold-methods-items' class="fold-items"><span>
+			<span class="nodocs">( T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-226">Match</a>(r *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>, match *<a href="#name-RouteMatch">RouteMatch</a>) <a href="../../builtin.html#name-bool">bool</a></span></span></span>
+		<input type='checkbox' class="fold" id="headerMatcher-fold-impls"><label for="headerMatcher-fold-impls">Implements (<i>at least one unexported</i>)</label><span id='headerMatcher-fold-impls-items' class="fold-items">
+			<input type='checkbox' checked class="showhide" id="headerMatcher-showhide-impls"><i><label for="headerMatcher-showhide-impls" class="show-inline">/* at least one unexported ... */</label><label for="headerMatcher-showhide-impls" class="hide-inline">/* at least one unexported: */</label></i><span class="hidden"><i>
+			 T : <a href="#name-matcher">matcher</a></i></span></span>
+
+</span></div><div class="anchor type-res hidden" id="name-headerRegexMatcher" data-popularity="100">	<input type='checkbox' class="fold" id="headerRegexMatcher-fold-content"><label for="headerRegexMatcher-fold-content"> type <a href="../../../src/github.com/gorilla/mux/route.go.html#line-249">headerRegexMatcher</a> <i>(map)</i></label><span id='headerRegexMatcher-fold-content-docs' class="fold-docs">
+		headerRegexMatcher matches the request against the route given a regex for the header
+
+		<input type='checkbox' class="fold" id="headerRegexMatcher-fold-methods"><label for="headerRegexMatcher-fold-methods">Methods (<i>only one, which is exported</i>)</label><span id='headerRegexMatcher-fold-methods-items' class="fold-items"><span>
+			<span class="nodocs">( T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-251">Match</a>(r *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>, match *<a href="#name-RouteMatch">RouteMatch</a>) <a href="../../builtin.html#name-bool">bool</a></span></span></span>
+		<input type='checkbox' class="fold" id="headerRegexMatcher-fold-impls"><label for="headerRegexMatcher-fold-impls">Implements (<i>at least one unexported</i>)</label><span id='headerRegexMatcher-fold-impls-items' class="fold-items">
+			<input type='checkbox' checked class="showhide" id="headerRegexMatcher-showhide-impls"><i><label for="headerRegexMatcher-showhide-impls" class="show-inline">/* at least one unexported ... */</label><label for="headerRegexMatcher-showhide-impls" class="hide-inline">/* at least one unexported: */</label></i><span class="hidden"><i>
+			 T : <a href="#name-matcher">matcher</a></i></span></span>
+
+</span></div><div class="anchor type-res hidden" id="name-matcher" data-popularity="1285">	<input type='checkbox' class="fold" id="matcher-fold-content"><label for="matcher-fold-content"> type <a href="../../../src/github.com/gorilla/mux/route.go.html#line-161">matcher</a> <b><i>(interface)</i></b></label><span id='matcher-fold-content-docs' class="fold-docs">
+		matcher types try to match a request.
+
+		<input type='checkbox' class="fold" id="matcher-fold-methods"><label for="matcher-fold-methods">Methods (<i>only one, which is exported</i>)</label><span id='matcher-fold-methods-items' class="fold-items"><span>
+			<span class="nodocs">( T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-162">Match</a>(*<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>, *<a href="#name-RouteMatch">RouteMatch</a>) <a href="../../builtin.html#name-bool">bool</a></span></span></span>
+		<input type='checkbox' class="fold" id="matcher-fold-impledby"><label for="matcher-fold-impledby">Implemented By (<i>at least 8, in which 3 are exported</i>)</label><span id='matcher-fold-impledby-items' class="fold-items"><span>
+			 <a href="#name-MatcherFunc">MatcherFunc</a></span><span>
+			*<a href="#name-Route">Route</a></span><span>
+			*<a href="#name-Router">Router</a></span>
+			<input type='checkbox' checked class="showhide" id="matcher-showhide-impedBys"><i><label for="matcher-showhide-impedBys" class="show-inline">/* 5+ unexporteds ... */</label><label for="matcher-showhide-impedBys" class="hide-inline">/* 5+ unexporteds: */</label></i><span class="hidden"><i>
+			 <a href="#name-headerMatcher">headerMatcher</a></i></span><span class="hidden"><i>
+			 <a href="#name-headerRegexMatcher">headerRegexMatcher</a></i></span><span class="hidden"><i>
+			 <a href="#name-methodMatcher">methodMatcher</a></i></span><span class="hidden"><i>
+			*<a href="#name-routeRegexp">routeRegexp</a></i></span><span class="hidden"><i>
+			 <a href="#name-schemeMatcher">schemeMatcher</a></i></span></span>
+		<input type='checkbox' class="fold" id="matcher-fold-params"><label for="matcher-fold-params">As Inputs Of (<i>at least one unexported</i>)</label><span id='matcher-fold-params-items' class="fold-items">
+			<input type='checkbox' checked class="showhide" id="matcher-showhide-outputofs"><i><label for="matcher-showhide-outputofs" class="show-inline">/* at least one unexported ... */</label><label for="matcher-showhide-outputofs" class="hide-inline">/* at least one unexported: */</label></i><span class="hidden"><i>
+			func (*<a href="#name-Route">Route</a>).<a href="../../../src/github.com/gorilla/mux/route.go.html#line-166">addMatcher</a>(m <b>matcher</b>) *<a href="#name-Route">Route</a></i></span></span>
+
+</span></div><div class="anchor type-res hidden" id="name-methodMatcher" data-popularity="100">	<input type='checkbox' class="fold" id="methodMatcher-fold-content"><label for="methodMatcher-fold-content"> type <a href="../../../src/github.com/gorilla/mux/route.go.html#line-316">methodMatcher</a> <i>([]T)</i></label><span id='methodMatcher-fold-content-docs' class="fold-docs">
+		methodMatcher matches the request against HTTP methods.
+
+		<input type='checkbox' class="fold" id="methodMatcher-fold-methods"><label for="methodMatcher-fold-methods">Methods (<i>only one, which is exported</i>)</label><span id='methodMatcher-fold-methods-items' class="fold-items"><span>
+			<span class="nodocs">( T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-318">Match</a>(r *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>, match *<a href="#name-RouteMatch">RouteMatch</a>) <a href="../../builtin.html#name-bool">bool</a></span></span></span>
+		<input type='checkbox' class="fold" id="methodMatcher-fold-impls"><label for="methodMatcher-fold-impls">Implements (<i>at least one unexported</i>)</label><span id='methodMatcher-fold-impls-items' class="fold-items">
+			<input type='checkbox' checked class="showhide" id="methodMatcher-showhide-impls"><i><label for="methodMatcher-showhide-impls" class="show-inline">/* at least one unexported ... */</label><label for="methodMatcher-showhide-impls" class="hide-inline">/* at least one unexported: */</label></i><span class="hidden"><i>
+			 T : <a href="#name-matcher">matcher</a></i></span></span>
+
+</span></div><div class="anchor type-res hidden" id="name-middleware" data-popularity="235">	<input type='checkbox' class="fold" id="middleware-fold-content"><label for="middleware-fold-content"> type <a href="../../../src/github.com/gorilla/mux/middleware.go.html#line-14">middleware</a> <b><i>(interface)</i></b></label><span id='middleware-fold-content-docs' class="fold-docs">
+		middleware interface is anything which implements a MiddlewareFunc named Middleware.
+
+		<input type='checkbox' class="fold" id="middleware-fold-methods"><label for="middleware-fold-methods">Methods (<i>only one, which is exported</i>)</label><span id='middleware-fold-methods-items' class="fold-items"><span>
+			<span class="nodocs">( T) <a href="../../../src/github.com/gorilla/mux/middleware.go.html#line-15">Middleware</a>(handler <a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Handler">Handler</a>) <a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Handler">Handler</a></span></span></span>
+		<input type='checkbox' class="fold" id="middleware-fold-impledby"><label for="middleware-fold-impledby">Implemented By (<i>at least one exported</i>)</label><span id='middleware-fold-impledby-items' class="fold-items"><span>
+			 <a href="#name-MiddlewareFunc">MiddlewareFunc</a></span></span>
+		<input type='checkbox' class="fold" id="middleware-fold-params"><label for="middleware-fold-params">As Inputs Of (<i>at least one unexported</i>)</label><span id='middleware-fold-params-items' class="fold-items">
+			<input type='checkbox' checked class="showhide" id="middleware-showhide-outputofs"><i><label for="middleware-showhide-outputofs" class="show-inline">/* at least one unexported ... */</label><label for="middleware-showhide-outputofs" class="hide-inline">/* at least one unexported: */</label></i><span class="hidden"><i>
+			func (*<a href="#name-Router">Router</a>).<a href="../../../src/github.com/gorilla/mux/middleware.go.html#line-31">useInterface</a>(mw <b>middleware</b>)</i></span></span>
+
+</span></div><div class="anchor type-res hidden" id="name-regexpType" data-popularity="85">	<input type='checkbox' class="fold" id="regexpType-fold-content"><label for="regexpType-fold-content"> type <a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-22">regexpType</a> <a href="../../builtin.html#name-int">int</a> <i>(basic type)</i></label><span id='regexpType-fold-content-docs' class="fold-docs">
+
+		<input type='checkbox' class="fold" id="regexpType-fold-params"><label for="regexpType-fold-params">As Inputs Of (<i>at least 2, neither is exported</i>)</label><span id='regexpType-fold-params-items' class="fold-items">
+			<input type='checkbox' checked class="showhide" id="regexpType-showhide-outputofs"><i><label for="regexpType-showhide-outputofs" class="show-inline">/* 2+ unexporteds ... */</label><label for="regexpType-showhide-outputofs" class="hide-inline">/* 2+ unexporteds: */</label></i><span class="hidden"><i>
+			func <a href="#name-newRouteRegexp">newRouteRegexp</a>(tpl <a href="../../builtin.html#name-string">string</a>, typ <b>regexpType</b>, options <a href="#name-routeRegexpOptions">routeRegexpOptions</a>) (*<a href="#name-routeRegexp">routeRegexp</a>, <a href="../../builtin.html#name-error">error</a>)</i></span><span class="hidden"><i>
+			func (*<a href="#name-Route">Route</a>).<a href="../../../src/github.com/gorilla/mux/route.go.html#line-174">addRegexpMatcher</a>(tpl <a href="../../builtin.html#name-string">string</a>, typ <b>regexpType</b>) <a href="../../builtin.html#name-error">error</a></i></span></span>
+		<input type='checkbox' class="fold" id="regexpType-fold-values"><label for="regexpType-fold-values">As Types Of (<i>total 4, none are exported</i>)</label><span id='regexpType-fold-values-items' class="fold-items">
+			<input type='checkbox' checked class="showhide" id="regexpType-showhide-values"><i><label for="regexpType-showhide-values" class="show-inline">/* 4 unexporteds ... */</label><label for="regexpType-showhide-values" class="hide-inline">/* 4 unexporteds: */</label></i><span class="hidden"><i>
+			const <a href="#name-regexpTypeHost">regexpTypeHost</a></i></span><span class="hidden"><i>
+			const <a href="#name-regexpTypePath">regexpTypePath</a></i></span><span class="hidden"><i>
+			const <a href="#name-regexpTypePrefix">regexpTypePrefix</a></i></span><span class="hidden"><i>
+			const <a href="#name-regexpTypeQuery">regexpTypeQuery</a></i></span></span>
+
+</span></div><div class="anchor type-res hidden" id="name-routeConf" data-popularity="110">	<input type='checkbox' class="fold" id="routeConf-fold-content"><label for="routeConf-fold-content"> type <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-73">routeConf</a> <i>(struct)</i></label><span id='routeConf-fold-content-docs' class="fold-docs">
+		common route configuration shared between `Router` and `Route`
+
+		<input type='checkbox' class="fold" id="routeConf-fold-fields"><label for="routeConf-fold-fields">Fields (<i>total 7, none are exported</i>)</label><span id='routeConf-fold-fields-items' class="fold-items">
+			<input type='checkbox' checked class="showhide" id="routeConf-showhide-fields"><i><label for="routeConf-showhide-fields" class="show-inline">/* 7 unexporteds ... */</label><label for="routeConf-showhide-fields" class="hide-inline">/* 7 unexporteds: */</label></i><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="routeConf-fold-field-buildScheme"><label for="routeConf-fold-field-buildScheme"><a href="../../../src/github.com/gorilla/mux/mux.go.html#line-92">buildScheme</a> <i><a href="../../builtin.html#name-string">string</a></i></label><span id='routeConf-fold-field-buildScheme-docs' class="fold-docs">
+				The scheme used when building URLs.
+</span></i></span><span class="hidden"><i>
+			<span class="nodocs"><a href="../../../src/github.com/gorilla/mux/mux.go.html#line-94">buildVarsFunc</a> <i><a href="#name-BuildVarsFunc">BuildVarsFunc</a></i></span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="routeConf-fold-field-matchers"><label for="routeConf-fold-field-matchers"><a href="../../../src/github.com/gorilla/mux/mux.go.html#line-89">matchers</a> <i>[]<a href="#name-matcher">matcher</a></i></label><span id='routeConf-fold-field-matchers-docs' class="fold-docs">
+				List of matchers.
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="routeConf-fold-field-regexp"><label for="routeConf-fold-field-regexp"><a href="../../../src/github.com/gorilla/mux/mux.go.html#line-86">regexp</a> <i><a href="#name-routeRegexpGroup">routeRegexpGroup</a></i></label><span id='routeConf-fold-field-regexp-docs' class="fold-docs">
+				Manager for the variables from host and path.
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="routeConf-fold-field-skipClean"><label for="routeConf-fold-field-skipClean"><a href="../../../src/github.com/gorilla/mux/mux.go.html#line-83">skipClean</a> <i><a href="../../builtin.html#name-bool">bool</a></i></label><span id='routeConf-fold-field-skipClean-docs' class="fold-docs">
+				If true, when the path pattern is "/path//to", accessing "/path//to"
+				will not redirect
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="routeConf-fold-field-strictSlash"><label for="routeConf-fold-field-strictSlash"><a href="../../../src/github.com/gorilla/mux/mux.go.html#line-79">strictSlash</a> <i><a href="../../builtin.html#name-bool">bool</a></i></label><span id='routeConf-fold-field-strictSlash-docs' class="fold-docs">
+				If true, when the path pattern is "/path/", accessing "/path" will
+				redirect to the former and vice versa.
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="routeConf-fold-field-useEncodedPath"><label for="routeConf-fold-field-useEncodedPath"><a href="../../../src/github.com/gorilla/mux/mux.go.html#line-75">useEncodedPath</a> <i><a href="../../builtin.html#name-bool">bool</a></i></label><span id='routeConf-fold-field-useEncodedPath-docs' class="fold-docs">
+				If true, "/path/foo%2Fbar/to" will match the path "/path/{var}/to"
+</span></i></span></span>
+		<input type='checkbox' class="fold" id="routeConf-fold-results"><label for="routeConf-fold-results">As Outputs Of (<i>at least one unexported</i>)</label><span id='routeConf-fold-results-items' class="fold-items">
+			<input type='checkbox' checked class="showhide" id="routeConf-showhide-inputofs"><i><label for="routeConf-showhide-inputofs" class="show-inline">/* at least one unexported ... */</label><label for="routeConf-showhide-inputofs" class="hide-inline">/* at least one unexported: */</label></i><span class="hidden"><i>
+			func <a href="#name-copyRouteConf">copyRouteConf</a>(r <b>routeConf</b>) <b>routeConf</b></i></span></span>
+		<input type='checkbox' class="fold" id="routeConf-fold-params"><label for="routeConf-fold-params">As Inputs Of (<i>at least one unexported</i>)</label><span id='routeConf-fold-params-items' class="fold-items">
+			<input type='checkbox' checked class="showhide" id="routeConf-showhide-outputofs"><i><label for="routeConf-showhide-outputofs" class="show-inline">/* at least one unexported ... */</label><label for="routeConf-showhide-outputofs" class="hide-inline">/* at least one unexported: */</label></i><span class="hidden"><i>
+			func <a href="#name-copyRouteConf">copyRouteConf</a>(r <b>routeConf</b>) <b>routeConf</b></i></span></span>
+
+</span></div><div class="anchor type-res hidden" id="name-routeRegexp" data-popularity="435">	<input type='checkbox' class="fold" id="routeRegexp-fold-content"><label for="routeRegexp-fold-content"> type <a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-154">routeRegexp</a> <i>(struct)</i></label><span id='routeRegexp-fold-content-docs' class="fold-docs">
+		routeRegexp stores a regexp to match a host or path and information to
+		collect and validate route variables.
+
+		<input type='checkbox' class="fold" id="routeRegexp-fold-fields"><label for="routeRegexp-fold-fields">Fields (<i>total 8, none are exported</i>)</label><span id='routeRegexp-fold-fields-items' class="fold-items">
+			<input type='checkbox' checked class="showhide" id="routeRegexp-showhide-fields"><i><label for="routeRegexp-showhide-fields" class="show-inline">/* 8 unexporteds ... */</label><label for="routeRegexp-showhide-fields" class="hide-inline">/* 8 unexporteds: */</label></i><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="routeRegexp-fold-field-options"><label for="routeRegexp-fold-field-options"><a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-160">options</a> <i><a href="#name-routeRegexpOptions">routeRegexpOptions</a></i></label><span id='routeRegexp-fold-field-options-docs' class="fold-docs">
+				Options for matching
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="routeRegexp-fold-field-regexp"><label for="routeRegexp-fold-field-regexp"><a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-162">regexp</a> <i>*<a href="../../regexp.html">regexp</a>.<a href="../../regexp.html#name-Regexp">Regexp</a></i></label><span id='routeRegexp-fold-field-regexp-docs' class="fold-docs">
+				Expanded regexp.
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="routeRegexp-fold-field-regexpType"><label for="routeRegexp-fold-field-regexpType"><a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-158">regexpType</a> <i><a href="#name-regexpType">regexpType</a></i></label><span id='routeRegexp-fold-field-regexpType-docs' class="fold-docs">
+				The type of match
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="routeRegexp-fold-field-reverse"><label for="routeRegexp-fold-field-reverse"><a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-164">reverse</a> <i><a href="../../builtin.html#name-string">string</a></i></label><span id='routeRegexp-fold-field-reverse-docs' class="fold-docs">
+				Reverse template.
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="routeRegexp-fold-field-template"><label for="routeRegexp-fold-field-template"><a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-156">template</a> <i><a href="../../builtin.html#name-string">string</a></i></label><span id='routeRegexp-fold-field-template-docs' class="fold-docs">
+				The unmodified template.
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="routeRegexp-fold-field-varsN"><label for="routeRegexp-fold-field-varsN"><a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-166">varsN</a> <i>[]<a href="../../builtin.html#name-string">string</a></i></label><span id='routeRegexp-fold-field-varsN-docs' class="fold-docs">
+				Variable names.
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="routeRegexp-fold-field-varsR"><label for="routeRegexp-fold-field-varsR"><a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-168">varsR</a> <i>[]*<a href="../../regexp.html">regexp</a>.<a href="../../regexp.html#name-Regexp">Regexp</a></i></label><span id='routeRegexp-fold-field-varsR-docs' class="fold-docs">
+				Variable regexps (validators).
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="routeRegexp-fold-field-wildcardHostPort"><label for="routeRegexp-fold-field-wildcardHostPort"><a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-170">wildcardHostPort</a> <i><a href="../../builtin.html#name-bool">bool</a></i></label><span id='routeRegexp-fold-field-wildcardHostPort-docs' class="fold-docs">
+				Wildcard host-port (no strict port match in hostname)
+</span></i></span></span>
+		<input type='checkbox' class="fold" id="routeRegexp-fold-methods"><label for="routeRegexp-fold-methods">Methods (<i>total 4, in which 1 are exported</i>)</label><span id='routeRegexp-fold-methods-items' class="fold-items"><span>
+			<input type='checkbox' class="fold" id="routeRegexp-fold-method-Match"><label for="routeRegexp-fold-method-Match">(*T) <a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-174">Match</a>(req *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>, match *<a href="#name-RouteMatch">RouteMatch</a>) <a href="../../builtin.html#name-bool">bool</a></label><span id='routeRegexp-fold-method-Match-docs' class="fold-docs">
+				Match matches the regexp against the URL host or path.
+</span></span>
+			<input type='checkbox' checked class="showhide" id="routeRegexp-showhide-methods"><i><label for="routeRegexp-showhide-methods" class="show-inline">/* 3 unexporteds ... */</label><label for="routeRegexp-showhide-methods" class="hide-inline">/* 3 unexporteds: */</label></i><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="routeRegexp-fold-method-getURLQuery"><label for="routeRegexp-fold-method-getURLQuery">(*T) <a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-228">getURLQuery</a>(req *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>) <a href="../../builtin.html#name-string">string</a></label><span id='routeRegexp-fold-method-getURLQuery-docs' class="fold-docs">
+				getURLQuery returns a single query parameter from a request URL.
+				For a URL with foo=bar&amp;baz=ding, we return only the relevant key
+				value pair for the routeRegexp.
+</span></i></span><span class="hidden"><i>
+			<span class="nodocs">(*T) <a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-278">matchQueryString</a>(req *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>) <a href="../../builtin.html#name-bool">bool</a></span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="routeRegexp-fold-method-url"><label for="routeRegexp-fold-method-url">(*T) <a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-197">url</a>(values map[<a href="../../builtin.html#name-string">string</a>]<a href="../../builtin.html#name-string">string</a>) (<a href="../../builtin.html#name-string">string</a>, <a href="../../builtin.html#name-error">error</a>)</label><span id='routeRegexp-fold-method-url-docs' class="fold-docs">
+				url builds a URL part using the given values.
+</span></i></span></span>
+		<input type='checkbox' class="fold" id="routeRegexp-fold-impls"><label for="routeRegexp-fold-impls">Implements (<i>at least one unexported</i>)</label><span id='routeRegexp-fold-impls-items' class="fold-items">
+			<input type='checkbox' checked class="showhide" id="routeRegexp-showhide-impls"><i><label for="routeRegexp-showhide-impls" class="show-inline">/* at least one unexported ... */</label><label for="routeRegexp-showhide-impls" class="hide-inline">/* at least one unexported: */</label></i><span class="hidden"><i>
+			*T : <a href="#name-matcher">matcher</a></i></span></span>
+		<input type='checkbox' class="fold" id="routeRegexp-fold-results"><label for="routeRegexp-fold-results">As Outputs Of (<i>at least 2, neither is exported</i>)</label><span id='routeRegexp-fold-results-items' class="fold-items">
+			<input type='checkbox' checked class="showhide" id="routeRegexp-showhide-inputofs"><i><label for="routeRegexp-showhide-inputofs" class="show-inline">/* 2+ unexporteds ... */</label><label for="routeRegexp-showhide-inputofs" class="hide-inline">/* 2+ unexporteds: */</label></i><span class="hidden"><i>
+			func <a href="#name-copyRouteRegexp">copyRouteRegexp</a>(r *<b>routeRegexp</b>) *<b>routeRegexp</b></i></span><span class="hidden"><i>
+			func <a href="#name-newRouteRegexp">newRouteRegexp</a>(tpl <a href="../../builtin.html#name-string">string</a>, typ <a href="#name-regexpType">regexpType</a>, options <a href="#name-routeRegexpOptions">routeRegexpOptions</a>) (*<b>routeRegexp</b>, <a href="../../builtin.html#name-error">error</a>)</i></span></span>
+		<input type='checkbox' class="fold" id="routeRegexp-fold-params"><label for="routeRegexp-fold-params">As Inputs Of (<i>at least one unexported</i>)</label><span id='routeRegexp-fold-params-items' class="fold-items">
+			<input type='checkbox' checked class="showhide" id="routeRegexp-showhide-outputofs"><i><label for="routeRegexp-showhide-outputofs" class="show-inline">/* at least one unexported ... */</label><label for="routeRegexp-showhide-outputofs" class="hide-inline">/* at least one unexported: */</label></i><span class="hidden"><i>
+			func <a href="#name-copyRouteRegexp">copyRouteRegexp</a>(r *<b>routeRegexp</b>) *<b>routeRegexp</b></i></span></span>
+
+</span></div><div class="anchor type-res hidden" id="name-routeRegexpGroup" data-popularity="50">	<input type='checkbox' class="fold" id="routeRegexpGroup-fold-content"><label for="routeRegexpGroup-fold-content"> type <a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-317">routeRegexpGroup</a> <i>(struct)</i></label><span id='routeRegexpGroup-fold-content-docs' class="fold-docs">
+		routeRegexpGroup groups the route matchers that carry variables.
+
+		<input type='checkbox' class="fold" id="routeRegexpGroup-fold-fields"><label for="routeRegexpGroup-fold-fields">Fields (<i>total 3, none are exported</i>)</label><span id='routeRegexpGroup-fold-fields-items' class="fold-items">
+			<input type='checkbox' checked class="showhide" id="routeRegexpGroup-showhide-fields"><i><label for="routeRegexpGroup-showhide-fields" class="show-inline">/* 3 unexporteds ... */</label><label for="routeRegexpGroup-showhide-fields" class="hide-inline">/* 3 unexporteds: */</label></i><span class="hidden"><i>
+			<span class="nodocs"><a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-318">host</a> <i>*<a href="#name-routeRegexp">routeRegexp</a></i></span></i></span><span class="hidden"><i>
+			<span class="nodocs"><a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-319">path</a> <i>*<a href="#name-routeRegexp">routeRegexp</a></i></span></i></span><span class="hidden"><i>
+			<span class="nodocs"><a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-320">queries</a> <i>[]*<a href="#name-routeRegexp">routeRegexp</a></i></span></i></span></span>
+		<input type='checkbox' class="fold" id="routeRegexpGroup-fold-methods"><label for="routeRegexpGroup-fold-methods">Methods (<i>only one, which is unexported</i>)</label><span id='routeRegexpGroup-fold-methods-items' class="fold-items">
+			<input type='checkbox' checked class="showhide" id="routeRegexpGroup-showhide-methods"><i><label for="routeRegexpGroup-showhide-methods" class="show-inline">/* one unexported ... */</label><label for="routeRegexpGroup-showhide-methods" class="hide-inline">/* one unexported: */</label></i><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="routeRegexpGroup-fold-method-setMatch"><label for="routeRegexpGroup-fold-method-setMatch">( T) <a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-324">setMatch</a>(req *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>, m *<a href="#name-RouteMatch">RouteMatch</a>, r *<a href="#name-Route">Route</a>)</label><span id='routeRegexpGroup-fold-method-setMatch-docs' class="fold-docs">
+				setMatch extracts the variables from the URL once a route matches.
+</span></i></span></span>
+
+</span></div><div class="anchor type-res hidden" id="name-routeRegexpOptions" data-popularity="35">	<input type='checkbox' class="fold" id="routeRegexpOptions-fold-content"><label for="routeRegexpOptions-fold-content"> type <a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-17">routeRegexpOptions</a> <i>(struct)</i></label><span id='routeRegexpOptions-fold-content-docs' class="fold-docs">
+
+		<input type='checkbox' class="fold" id="routeRegexpOptions-fold-fields"><label for="routeRegexpOptions-fold-fields">Fields (<i>total 2, neither is exported</i>)</label><span id='routeRegexpOptions-fold-fields-items' class="fold-items">
+			<input type='checkbox' checked class="showhide" id="routeRegexpOptions-showhide-fields"><i><label for="routeRegexpOptions-showhide-fields" class="show-inline">/* 2 unexporteds ... */</label><label for="routeRegexpOptions-showhide-fields" class="hide-inline">/* 2 unexporteds: */</label></i><span class="hidden"><i>
+			<span class="nodocs"><a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-18">strictSlash</a> <i><a href="../../builtin.html#name-bool">bool</a></i></span></i></span><span class="hidden"><i>
+			<span class="nodocs"><a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-19">useEncodedPath</a> <i><a href="../../builtin.html#name-bool">bool</a></i></span></i></span></span>
+		<input type='checkbox' class="fold" id="routeRegexpOptions-fold-params"><label for="routeRegexpOptions-fold-params">As Inputs Of (<i>at least one unexported</i>)</label><span id='routeRegexpOptions-fold-params-items' class="fold-items">
+			<input type='checkbox' checked class="showhide" id="routeRegexpOptions-showhide-outputofs"><i><label for="routeRegexpOptions-showhide-outputofs" class="show-inline">/* at least one unexported ... */</label><label for="routeRegexpOptions-showhide-outputofs" class="hide-inline">/* at least one unexported: */</label></i><span class="hidden"><i>
+			func <a href="#name-newRouteRegexp">newRouteRegexp</a>(tpl <a href="../../builtin.html#name-string">string</a>, typ <a href="#name-regexpType">regexpType</a>, options <b>routeRegexpOptions</b>) (*<a href="#name-routeRegexp">routeRegexp</a>, <a href="../../builtin.html#name-error">error</a>)</i></span></span>
+
+</span></div><div class="anchor type-res hidden" id="name-schemeMatcher" data-popularity="100">	<input type='checkbox' class="fold" id="schemeMatcher-fold-content"><label for="schemeMatcher-fold-content"> type <a href="../../../src/github.com/gorilla/mux/route.go.html#line-412">schemeMatcher</a> <i>([]T)</i></label><span id='schemeMatcher-fold-content-docs' class="fold-docs">
+		schemeMatcher matches the request against URL schemes.
+
+		<input type='checkbox' class="fold" id="schemeMatcher-fold-methods"><label for="schemeMatcher-fold-methods">Methods (<i>only one, which is exported</i>)</label><span id='schemeMatcher-fold-methods-items' class="fold-items"><span>
+			<span class="nodocs">( T) <a href="../../../src/github.com/gorilla/mux/route.go.html#line-414">Match</a>(r *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>, match *<a href="#name-RouteMatch">RouteMatch</a>) <a href="../../builtin.html#name-bool">bool</a></span></span></span>
+		<input type='checkbox' class="fold" id="schemeMatcher-fold-impls"><label for="schemeMatcher-fold-impls">Implements (<i>at least one unexported</i>)</label><span id='schemeMatcher-fold-impls-items' class="fold-items">
+			<input type='checkbox' checked class="showhide" id="schemeMatcher-showhide-impls"><i><label for="schemeMatcher-showhide-impls" class="show-inline">/* at least one unexported ... */</label><label for="schemeMatcher-showhide-impls" class="hide-inline">/* at least one unexported: */</label></i><span class="hidden"><i>
+			 T : <a href="#name-matcher">matcher</a></i></span></span>
+
+</span></div></div>
+<div id="exported-functions"><span class="title">Package-Level Functions<span class="title-stat"><i> (total 26, in which 5 are exported)</i></span></span>
+
+<div class="anchor value-res" id="name-CORSMethodMiddleware">	<input type='checkbox' class="fold" id="CORSMethodMiddleware-fold-content"><label for="CORSMethodMiddleware-fold-content"> func <a href="../../../src/github.com/gorilla/mux/middleware.go.html#line-39">CORSMethodMiddleware</a>(r *<a href="#name-Router">Router</a>) <a href="#name-MiddlewareFunc">MiddlewareFunc</a></label><span id='CORSMethodMiddleware-fold-content-docs' class="fold-docs">
+		CORSMethodMiddleware automatically sets the Access-Control-Allow-Methods response header
+		on requests for routes that have an OPTIONS method matcher to all the method matchers on
+		the route. Routes that do not explicitly handle OPTIONS requests will not be processed
+		by the middleware. See examples for usage.
+
+</span></div><div class="anchor value-res" id="name-CurrentRoute">	<input type='checkbox' class="fold" id="CurrentRoute-fold-content"><label for="CurrentRoute-fold-content"> func <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-439">CurrentRoute</a>(r *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>) *<a href="#name-Route">Route</a></label><span id='CurrentRoute-fold-content-docs' class="fold-docs">
+		CurrentRoute returns the matched route for the current request, if any.
+		This only works when called inside the handler of the matched route
+		because the matched route is stored in the request context which is cleared
+		after the handler returns.
+
+</span></div><div class="anchor value-res" id="name-NewRouter">	<input type='checkbox' class="fold" id="NewRouter-fold-content"><label for="NewRouter-fold-content"> func <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-25">NewRouter</a>() *<a href="#name-Router">Router</a></label><span id='NewRouter-fold-content-docs' class="fold-docs">
+		NewRouter returns a new router instance.
+
+</span></div><div class="anchor value-res" id="name-SetURLVars">	<input type='checkbox' class="fold" id="SetURLVars-fold-content"><label for="SetURLVars-fold-content"> func <a href="../../../src/github.com/gorilla/mux/test_helpers.go.html#line-17">SetURLVars</a>(r *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>, val map[<a href="../../builtin.html#name-string">string</a>]<a href="../../builtin.html#name-string">string</a>) *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a></label><span id='SetURLVars-fold-content-docs' class="fold-docs">
+		SetURLVars sets the URL variables for the given request, to be accessed via
+		mux.Vars for testing route behaviour. Arguments are not modified, a shallow
+		copy is returned.
+
+		This API should only be used for testing purposes; it provides a way to
+		inject variables into the request context. Alternatively, URL variables
+		can be set by making a route that captures the required variables,
+		starting a server and sending the request to that server.
+
+</span></div><div class="anchor value-res" id="name-Vars">	<input type='checkbox' class="fold" id="Vars-fold-content"><label for="Vars-fold-content"> func <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-428">Vars</a>(r *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>) map[<a href="../../builtin.html#name-string">string</a>]<a href="../../builtin.html#name-string">string</a></label><span id='Vars-fold-content-docs' class="fold-docs">
+		Vars returns the route variables for the current request, if any.
+
+</span></div>	<input type='checkbox' class="showhide" id="unexported-functions-showhide"><i><label for="unexported-functions-showhide" class="show-inline">/* 21 unexporteds ... */</label><label for="unexported-functions-showhide" class="hide-inline">/* 21 unexporteds: */</label></i><div class="anchor value-res hidden" id="name-braceIndices"><i>	<input type='checkbox' class="fold" id="braceIndices-fold-content"><label for="braceIndices-fold-content"> func <a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-284">braceIndices</a>(s <a href="../../builtin.html#name-string">string</a>) ([]<a href="../../builtin.html#name-int">int</a>, <a href="../../builtin.html#name-error">error</a>)</label><span id='braceIndices-fold-content-docs' class="fold-docs">
+		braceIndices returns the first level curly brace indices from a string.
+		It returns an error in case of unbalanced braces.
+
+</span></i></div><div class="anchor value-res hidden" id="name-checkPairs"><i>	<input type='checkbox' class="fold" id="checkPairs-fold-content"><label for="checkPairs-fold-content"> func <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-493">checkPairs</a>(pairs ...<a href="../../builtin.html#name-string">string</a>) (<a href="../../builtin.html#name-int">int</a>, <a href="../../builtin.html#name-error">error</a>)</label><span id='checkPairs-fold-content-docs' class="fold-docs">
+		checkPairs returns the count of strings passed in, and an error if
+		the count is not an even number.
+
+</span></i></div><div class="anchor value-res hidden" id="name-cleanPath"><i>	<input type='checkbox' class="fold" id="cleanPath-fold-content"><label for="cleanPath-fold-content"> func <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-462">cleanPath</a>(p <a href="../../builtin.html#name-string">string</a>) <a href="../../builtin.html#name-string">string</a></label><span id='cleanPath-fold-content-docs' class="fold-docs">
+		cleanPath returns the canonical path for p, eliminating . and .. elements.
+		Borrowed from the net/http package.
+
+</span></i></div><div class="anchor value-res hidden" id="name-copyRouteConf"><i>	<input type='checkbox' class="fold" id="copyRouteConf-fold-content"><label for="copyRouteConf-fold-content"> func <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-98">copyRouteConf</a>(r <a href="#name-routeConf">routeConf</a>) <a href="#name-routeConf">routeConf</a></label><span id='copyRouteConf-fold-content-docs' class="fold-docs">
+		returns an effective deep copy of `routeConf`
+
+</span></i></div><div class="anchor value-res hidden" id="name-copyRouteRegexp"><i>	<span class="nodocs"> func <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-120">copyRouteRegexp</a>(r *<a href="#name-routeRegexp">routeRegexp</a>) *<a href="#name-routeRegexp">routeRegexp</a></span></i></div><div class="anchor value-res hidden" id="name-extractVars"><i>	<span class="nodocs"> func <a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-384">extractVars</a>(input <a href="../../builtin.html#name-string">string</a>, matches []<a href="../../builtin.html#name-int">int</a>, names []<a href="../../builtin.html#name-string">string</a>, output map[<a href="../../builtin.html#name-string">string</a>]<a href="../../builtin.html#name-string">string</a>)</span></i></div><div class="anchor value-res hidden" id="name-findFirstQueryKey"><i>	<input type='checkbox' class="fold" id="findFirstQueryKey-fold-content"><label for="findFirstQueryKey-fold-content"> func <a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-242">findFirstQueryKey</a>(rawQuery, key <a href="../../builtin.html#name-string">string</a>) (value <a href="../../builtin.html#name-string">string</a>, ok <a href="../../builtin.html#name-bool">bool</a>)</label><span id='findFirstQueryKey-fold-content-docs' class="fold-docs">
+		findFirstQueryKey returns the same result as (*url.URL).Query()[key][0].
+		If key was not found, empty string and false is returned.
+
+</span></i></div><div class="anchor value-res hidden" id="name-getAllMethodsForRoute"><i>	<input type='checkbox' class="fold" id="getAllMethodsForRoute-fold-content"><label for="getAllMethodsForRoute-fold-content"> func <a href="../../../src/github.com/gorilla/mux/middleware.go.html#line-58">getAllMethodsForRoute</a>(r *<a href="#name-Router">Router</a>, req *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>) ([]<a href="../../builtin.html#name-string">string</a>, <a href="../../builtin.html#name-error">error</a>)</label><span id='getAllMethodsForRoute-fold-content-docs' class="fold-docs">
+		getAllMethodsForRoute returns all the methods from method matchers matching a given
+		request.
+
+</span></i></div><div class="anchor value-res hidden" id="name-getHost"><i>	<input type='checkbox' class="fold" id="getHost-fold-content"><label for="getHost-fold-content"> func <a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-377">getHost</a>(r *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>) <a href="../../builtin.html#name-string">string</a></label><span id='getHost-fold-content-docs' class="fold-docs">
+		getHost tries its best to return the request host.
+		According to section 14.23 of RFC 2616 the Host header
+		can include the port number if the default value of 80 is not used.
+
+</span></i></div><div class="anchor value-res hidden" id="name-mapFromPairsToRegex"><i>	<input type='checkbox' class="fold" id="mapFromPairsToRegex-fold-content"><label for="mapFromPairsToRegex-fold-content"> func <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-518">mapFromPairsToRegex</a>(pairs ...<a href="../../builtin.html#name-string">string</a>) (map[<a href="../../builtin.html#name-string">string</a>]*<a href="../../regexp.html">regexp</a>.<a href="../../regexp.html#name-Regexp">Regexp</a>, <a href="../../builtin.html#name-error">error</a>)</label><span id='mapFromPairsToRegex-fold-content-docs' class="fold-docs">
+		mapFromPairsToRegex converts variadic string parameters to a
+		string to regex map.
+
+</span></i></div><div class="anchor value-res hidden" id="name-mapFromPairsToString"><i>	<input type='checkbox' class="fold" id="mapFromPairsToString-fold-content"><label for="mapFromPairsToString-fold-content"> func <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-504">mapFromPairsToString</a>(pairs ...<a href="../../builtin.html#name-string">string</a>) (map[<a href="../../builtin.html#name-string">string</a>]<a href="../../builtin.html#name-string">string</a>, <a href="../../builtin.html#name-error">error</a>)</label><span id='mapFromPairsToString-fold-content-docs' class="fold-docs">
+		mapFromPairsToString converts variadic string parameters to a
+		string to string map.
+
+</span></i></div><div class="anchor value-res hidden" id="name-matchInArray"><i>	<input type='checkbox' class="fold" id="matchInArray-fold-content"><label for="matchInArray-fold-content"> func <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-535">matchInArray</a>(arr []<a href="../../builtin.html#name-string">string</a>, value <a href="../../builtin.html#name-string">string</a>) <a href="../../builtin.html#name-bool">bool</a></label><span id='matchInArray-fold-content-docs' class="fold-docs">
+		matchInArray returns true if the given string value is in the array.
+
+</span></i></div><div class="anchor value-res hidden" id="name-matchMapWithRegex"><i>	<input type='checkbox' class="fold" id="matchMapWithRegex-fold-content"><label for="matchMapWithRegex-fold-content"> func <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-573">matchMapWithRegex</a>(toCheck map[<a href="../../builtin.html#name-string">string</a>]*<a href="../../regexp.html">regexp</a>.<a href="../../regexp.html#name-Regexp">Regexp</a>, toMatch map[<a href="../../builtin.html#name-string">string</a>][]<a href="../../builtin.html#name-string">string</a>, canonicalKey <a href="../../builtin.html#name-bool">bool</a>) <a href="../../builtin.html#name-bool">bool</a></label><span id='matchMapWithRegex-fold-content-docs' class="fold-docs">
+		matchMapWithRegex returns true if the given key/value pairs exist in a given map compiled against
+		the given regex
+
+</span></i></div><div class="anchor value-res hidden" id="name-matchMapWithString"><i>	<input type='checkbox' class="fold" id="matchMapWithString-fold-content"><label for="matchMapWithString-fold-content"> func <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-545">matchMapWithString</a>(toCheck map[<a href="../../builtin.html#name-string">string</a>]<a href="../../builtin.html#name-string">string</a>, toMatch map[<a href="../../builtin.html#name-string">string</a>][]<a href="../../builtin.html#name-string">string</a>, canonicalKey <a href="../../builtin.html#name-bool">bool</a>) <a href="../../builtin.html#name-bool">bool</a></label><span id='matchMapWithString-fold-content-docs' class="fold-docs">
+		matchMapWithString returns true if the given key/value pairs exist in a given map.
+
+</span></i></div><div class="anchor value-res hidden" id="name-methodNotAllowed"><i>	<input type='checkbox' class="fold" id="methodNotAllowed-fold-content"><label for="methodNotAllowed-fold-content"> func <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-600">methodNotAllowed</a>(w <a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-ResponseWriter">ResponseWriter</a>, r *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>)</label><span id='methodNotAllowed-fold-content-docs' class="fold-docs">
+		methodNotAllowed replies to the request with an HTTP status code 405.
+
+</span></i></div><div class="anchor value-res hidden" id="name-methodNotAllowedHandler"><i>	<input type='checkbox' class="fold" id="methodNotAllowedHandler-fold-content"><label for="methodNotAllowedHandler-fold-content"> func <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-606">methodNotAllowedHandler</a>() <a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Handler">Handler</a></label><span id='methodNotAllowedHandler-fold-content-docs' class="fold-docs">
+		methodNotAllowedHandler returns a simple request handler
+		that replies to each request with a status code 405.
+
+</span></i></div><div class="anchor value-res hidden" id="name-newRouteRegexp"><i>	<input type='checkbox' class="fold" id="newRouteRegexp-fold-content"><label for="newRouteRegexp-fold-content"> func <a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-41">newRouteRegexp</a>(tpl <a href="../../builtin.html#name-string">string</a>, typ <a href="#name-regexpType">regexpType</a>, options <a href="#name-routeRegexpOptions">routeRegexpOptions</a>) (*<a href="#name-routeRegexp">routeRegexp</a>, <a href="../../builtin.html#name-error">error</a>)</label><span id='newRouteRegexp-fold-content-docs' class="fold-docs">
+		newRouteRegexp parses a route template and returns a routeRegexp,
+		used to match a host, a path or a query string.
+
+		It will extract named variables, assemble a regexp to be matched, create
+		a "reverse" template to build URLs and compile regexps to validate variable
+		values used in URL building.
+
+		Previously we accepted only Python-like identifiers for variable
+		names ([a-zA-Z_][a-zA-Z0-9_]*), but currently the only restriction is that
+		name and pattern can't be empty, and names can't contain a colon.
+
+</span></i></div><div class="anchor value-res hidden" id="name-requestWithRoute"><i>	<span class="nodocs"> func <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-451">requestWithRoute</a>(r *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>, route *<a href="#name-Route">Route</a>) *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a></span></i></div><div class="anchor value-res hidden" id="name-requestWithVars"><i>	<span class="nodocs"> func <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-446">requestWithVars</a>(r *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a>, vars map[<a href="../../builtin.html#name-string">string</a>]<a href="../../builtin.html#name-string">string</a>) *<a href="../../net/http.html">http</a>.<a href="../../net/http.html#name-Request">Request</a></span></i></div><div class="anchor value-res hidden" id="name-uniqueVars"><i>	<input type='checkbox' class="fold" id="uniqueVars-fold-content"><label for="uniqueVars-fold-content"> func <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-480">uniqueVars</a>(s1, s2 []<a href="../../builtin.html#name-string">string</a>) <a href="../../builtin.html#name-error">error</a></label><span id='uniqueVars-fold-content-docs' class="fold-docs">
+		uniqueVars returns an error if two slices contain duplicated strings.
+
+</span></i></div><div class="anchor value-res hidden" id="name-varGroupName"><i>	<input type='checkbox' class="fold" id="varGroupName-fold-content"><label for="varGroupName-fold-content"> func <a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-308">varGroupName</a>(idx <a href="../../builtin.html#name-int">int</a>) <a href="../../builtin.html#name-string">string</a></label><span id='varGroupName-fold-content-docs' class="fold-docs">
+		varGroupName builds a capturing group name for the indexed variable.
+
+</span></i></div></div>
+<div id="exported-variables"><span class="title">Package-Level Variables<span class="title-stat"><i> (total 3, all are exported)</i></span></span>
+
+<div class="anchor value-res" id="name-ErrMethodMismatch">	<input type='checkbox' class="fold" id="ErrMethodMismatch-fold-content"><label for="ErrMethodMismatch-fold-content">  var <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-19">ErrMethodMismatch</a> <a href="../../builtin.html#name-error">error</a></label><span id='ErrMethodMismatch-fold-content-docs' class="fold-docs">
+		ErrMethodMismatch is returned when the method in the request does not match
+		the method defined against the route.
+
+</span></div><div class="anchor value-res" id="name-ErrNotFound">	<input type='checkbox' class="fold" id="ErrNotFound-fold-content"><label for="ErrNotFound-fold-content">  var <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-21">ErrNotFound</a> <a href="../../builtin.html#name-error">error</a></label><span id='ErrNotFound-fold-content-docs' class="fold-docs">
+		ErrNotFound is returned when no route match is found.
+
+</span></div><div class="anchor value-res" id="name-SkipRouter">	<input type='checkbox' class="fold" id="SkipRouter-fold-content"><label for="SkipRouter-fold-content">  var <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-366">SkipRouter</a> <a href="../../builtin.html#name-error">error</a></label><span id='SkipRouter-fold-content-docs' class="fold-docs">
+		SkipRouter is used as a return value from WalkFuncs to indicate that the
+		router that walk is about to descend down to should be skipped.
+
+</span></div></div>
+<div id="exported-constants"><span class="title">Package-Level Constants<span class="title-stat"><i> (total 6, none are exported)</i></span></span>
+
+	<input type='checkbox' class="showhide" id="unexported-constants-showhide"><i><label for="unexported-constants-showhide" class="show-inline">/* 6 unexporteds ... */</label><label for="unexported-constants-showhide" class="hide-inline">/* 6 unexporteds: */</label></i><div class="anchor value-res hidden" id="name-regexpTypeHost"><i>	<span class="nodocs">const <a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-26">regexpTypeHost</a> <a href="#name-regexpType">regexpType</a> = 1</span></i></div><div class="anchor value-res hidden" id="name-regexpTypePath"><i>	<span class="nodocs">const <a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-25">regexpTypePath</a> <a href="#name-regexpType">regexpType</a> = 0</span></i></div><div class="anchor value-res hidden" id="name-regexpTypePrefix"><i>	<span class="nodocs">const <a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-27">regexpTypePrefix</a> <a href="#name-regexpType">regexpType</a> = 2</span></i></div><div class="anchor value-res hidden" id="name-regexpTypeQuery"><i>	<span class="nodocs">const <a href="../../../src/github.com/gorilla/mux/regexp.go.html#line-28">regexpTypeQuery</a> <a href="#name-regexpType">regexpType</a> = 3</span></i></div><div class="anchor value-res hidden" id="name-routeKey"><i>	<span class="nodocs">const <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-424">routeKey</a> <a href="#name-contextKey">contextKey</a> = 1</span></i></div><div class="anchor value-res hidden" id="name-varsKey"><i>	<span class="nodocs">const <a href="../../../src/github.com/gorilla/mux/mux.go.html#line-423">varsKey</a> <a href="#name-contextKey">contextKey</a> = 0</span></i></div></div></code></pre><pre id="footer">
+<table><tr><td><img src="../../../png/go101-twitter.png"></td>
+<td>The pages are generated with <a href="https://go101.org/article/tool-golds.html"><b>Golds</b></a> <i>v0.3.6</i>. (GOOS=linux GOARCH=amd64)
+<b>Golds</b> is a <a href="https://go101.org">Go 101</a> project developed by <a href="https://tapirgames.com">Tapir Liu</a>.
+PR and bug reports are welcome and can be submitted to <a href="https://github.com/go101/golds">the issue list</a>.
+Please follow <a href="https://twitter.com/go100and1">@Go100and1</a> (reachable from the left QR code) to get the latest news of <b>Golds</b>.</td></tr></table></pre>

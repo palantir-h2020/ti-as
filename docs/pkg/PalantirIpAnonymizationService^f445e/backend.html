@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Package: PalantirIpAnonymizationService/backend</title>
+<link href="../../css/light-v0.3.6.css" rel="stylesheet">
+<script src="../../jvs/golds-v0.3.6.js"></script>
+<body onload="onPageLoad()"><div>
+
+<pre id="package-details"><code><span style="font-size:xx-large;">package <b>backend</b></span>
+
+<span class="title">Import Path</span>
+	<a href="../../index.html#pkg-PalantirIpAnonymizationService/backend">PalantirIpAnonymizationService/backend</a><i> (on <a href="https://pkg.go.dev/PalantirIpAnonymizationService/backend" target="_blank">go.dev</a>)</i>
+
+<span class="title">Dependency Relation</span>
+	imports <a href="../../dep/PalantirIpAnonymizationService^f445e/backend.html">11 packages</a>, and imported by <a href="../../dep/PalantirIpAnonymizationService^f445e/backend.html#imported-by">one package</a>
+
+<div id="files"><span class="title">Involved Source Files</span>
+
+	<span class="nodocs">      <a href="../../src/PalantirIpAnonymizationService^f445e/backend/app.go.html">app.go</a></span></div>
+<div id="exported-types"><span class="title">Package-Level Type Names<span class="title-stat"><i> (total 2, both are exported)</i></span></span>
+
+<div id="exported-types-buttons" class="js-on">	/* sort exporteds by: <label id="sort-types-by-alphabet" class="button">alphabet</label> | <label id="sort-types-by-popularity" class="button">popularity</label> */</div><div class="anchor type-res" id="name-App" data-popularity="300">	<input type='checkbox' class="fold" id="App-fold-content"><label for="App-fold-content"> type <a href="../../src/PalantirIpAnonymizationService^f445e/backend/app.go.html#line-19">App</a> <i>(struct)</i></label><span id='App-fold-content-docs' class="fold-docs">
+
+		<input type='checkbox' class="fold" id="App-fold-fields"><label for="App-fold-fields">Fields (<i>only one, which is exported</i>)</label><span id='App-fold-fields-items' class="fold-items"><span>
+			<span class="nodocs"><a href="../../src/PalantirIpAnonymizationService^f445e/backend/app.go.html#line-20">Router</a> <i>*<a href="../github.com/gorilla/mux.html">mux</a>.<a href="../github.com/gorilla/mux.html#name-Router">Router</a></i></span></span></span>
+		<input type='checkbox' class="fold" id="App-fold-methods"><label for="App-fold-methods">Methods (<i>total 6, in which 2 are exported</i>)</label><span id='App-fold-methods-items' class="fold-items"><span>
+			<span class="nodocs">(*T) <a href="../../src/PalantirIpAnonymizationService^f445e/backend/app.go.html#line-32">Initialize</a>(config *<a href="utils.html">utils</a>.<a href="utils.html#name-Config">Config</a>)</span></span><span>
+			<span class="nodocs">(*T) <a href="../../src/PalantirIpAnonymizationService^f445e/backend/app.go.html#line-39">Run</a>(addr <a href="../builtin.html#name-string">string</a>)</span></span>
+			<input type='checkbox' class="showhide" id="App-showhide-methods"><i><label for="App-showhide-methods" class="show-inline">/* 4 unexporteds ... */</label><label for="App-showhide-methods" class="hide-inline">/* 4 unexporteds: */</label></i><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="App-fold-method-anonymizeRoute"><label for="App-fold-method-anonymizeRoute">(*T) <a href="../../src/PalantirIpAnonymizationService^f445e/backend/app.go.html#line-62">anonymizeRoute</a>(w <a href="../net/http.html">http</a>.<a href="../net/http.html#name-ResponseWriter">ResponseWriter</a>, r *<a href="../net/http.html">http</a>.<a href="../net/http.html#name-Request">Request</a>)</label><span id='App-fold-method-anonymizeRoute-docs' class="fold-docs">
+				* This function takes as argument the original IP address from the netflow and returns a response with the obfuscated IP address.
+</span></i></span><span class="hidden"><i>
+			<input type='checkbox' class="fold" id="App-fold-method-deanonymizeRoute"><label for="App-fold-method-deanonymizeRoute">(*T) <a href="../../src/PalantirIpAnonymizationService^f445e/backend/app.go.html#line-113">deanonymizeRoute</a>(w <a href="../net/http.html">http</a>.<a href="../net/http.html#name-ResponseWriter">ResponseWriter</a>, r *<a href="../net/http.html">http</a>.<a href="../net/http.html#name-Request">Request</a>)</label><span id='App-fold-method-deanonymizeRoute-docs' class="fold-docs">
+				This function takes as argument the obfuscated IP address from the netflow and returns a response with the original IP address.
+</span></i></span><span class="hidden"><i>
+			<span class="nodocs">(*T) <a href="../../src/PalantirIpAnonymizationService^f445e/backend/app.go.html#line-50">homeRoute</a>(w <a href="../net/http.html">http</a>.<a href="../net/http.html#name-ResponseWriter">ResponseWriter</a>, r *<a href="../net/http.html">http</a>.<a href="../net/http.html#name-Request">Request</a>)</span></i></span><span class="hidden"><i>
+			<span class="nodocs">(*T) <a href="../../src/PalantirIpAnonymizationService^f445e/backend/app.go.html#line-44">initializeRoutes</a>()</span></i></span></span>
+
+</span></div><div class="anchor type-res" id="name-RequestBody" data-popularity="0">	<input type='checkbox' class="fold" id="RequestBody-fold-content"><label for="RequestBody-fold-content"> type <a href="../../src/PalantirIpAnonymizationService^f445e/backend/app.go.html#line-23">RequestBody</a> <i>(struct)</i></label><span id='RequestBody-fold-content-docs' class="fold-docs">
+
+		<input type='checkbox' class="fold" id="RequestBody-fold-fields"><label for="RequestBody-fold-fields">Fields (<i>only one, which is exported</i>)</label><span id='RequestBody-fold-fields-items' class="fold-items"><span>
+			<span class="nodocs"><a href="../../src/PalantirIpAnonymizationService^f445e/backend/app.go.html#line-24">IpAddr</a> <i><a href="../builtin.html#name-string">string</a></i></span></span></span>
+
+</span></div></div>
+<div id="exported-functions"><span class="title">Package-Level Functions<span class="title-stat"><i> (total 4, none are exported)</i></span></span>
+
+	<input type='checkbox' class="showhide" id="unexported-functions-showhide"><i><label for="unexported-functions-showhide" class="show-inline">/* 4 unexporteds ... */</label><label for="unexported-functions-showhide" class="hide-inline">/* 4 unexporteds: */</label></i><div class="anchor value-res hidden" id="name-initializeCryptoPan"><i>	<input type='checkbox' class="fold" id="initializeCryptoPan-fold-content"><label for="initializeCryptoPan-fold-content"> func <a href="../../src/PalantirIpAnonymizationService^f445e/backend/app.go.html#line-174">initializeCryptoPan</a>() *<a href="cryptopan.html">cryptopan</a>.<a href="cryptopan.html#name-Cryptopan">Cryptopan</a></label><span id='initializeCryptoPan-fold-content-docs' class="fold-docs">
+		This function initializes the Cryptopan library.
+
+</span></i></div><div class="anchor value-res hidden" id="name-initializeDbConnection"><i>	<input type='checkbox' class="fold" id="initializeDbConnection-fold-content"><label for="initializeDbConnection-fold-content"> func <a href="../../src/PalantirIpAnonymizationService^f445e/backend/app.go.html#line-191">initializeDbConnection</a>(config *<a href="utils.html">utils</a>.<a href="utils.html#name-Config">Config</a>) *<a href="backend/db.html">db</a>.<a href="backend/db.html#name-RedisDb">RedisDb</a></label><span id='initializeDbConnection-fold-content-docs' class="fold-docs">
+		This function takes all the required credentials and makes a new connection with a Redis database.
+
+</span></i></div><div class="anchor value-res hidden" id="name-respondWithError"><i>	<span class="nodocs"> func <a href="../../src/PalantirIpAnonymizationService^f445e/backend/app.go.html#line-160">respondWithError</a>(w <a href="../net/http.html">http</a>.<a href="../net/http.html#name-ResponseWriter">ResponseWriter</a>, code <a href="../builtin.html#name-int">int</a>, message <a href="../builtin.html#name-string">string</a>)</span></i></div><div class="anchor value-res hidden" id="name-respondWithJSON"><i>	<input type='checkbox' class="fold" id="respondWithJSON-fold-content"><label for="respondWithJSON-fold-content"> func <a href="../../src/PalantirIpAnonymizationService^f445e/backend/app.go.html#line-165">respondWithJSON</a>(w <a href="../net/http.html">http</a>.<a href="../net/http.html#name-ResponseWriter">ResponseWriter</a>, code <a href="../builtin.html#name-int">int</a>, payload interface{})</label><span id='respondWithJSON-fold-content-docs' class="fold-docs">
+		* This function builds a JSON object to make it ready for a POST method.
+
+</span></i></div></div>
+<div id="exported-variables"><span class="title">Package-Level Variables<span class="title-stat"><i> (total 3, none are exported)</i></span></span>
+
+	<input type='checkbox' class="showhide" id="unexported-variables-showhide"><i><label for="unexported-variables-showhide" class="show-inline">/* 3 unexporteds ... */</label><label for="unexported-variables-showhide" class="hide-inline">/* 3 unexporteds: */</label></i><div class="anchor value-res hidden" id="name-cpan"><i>	<span class="nodocs">  var <a href="../../src/PalantirIpAnonymizationService^f445e/backend/app.go.html#line-29">cpan</a> *<a href="cryptopan.html">cryptopan</a>.<a href="cryptopan.html#name-Cryptopan">Cryptopan</a></span></i></div><div class="anchor value-res hidden" id="name-dbController"><i>	<span class="nodocs">  var <a href="../../src/PalantirIpAnonymizationService^f445e/backend/app.go.html#line-30">dbController</a> *<a href="backend/db.html">db</a>.<a href="backend/db.html#name-RedisDb">RedisDb</a></span></i></div><div class="anchor value-res hidden" id="name-log"><i>	<input type='checkbox' class="fold" id="log-fold-content"><label for="log-fold-content">  var <a href="../../src/PalantirIpAnonymizationService^f445e/backend/app.go.html#line-28">log</a> *<a href="logger.html">logger</a>.<a href="logger.html#name-Logger">Logger</a></label><span id='log-fold-content-docs' class="fold-docs">
+		Initialize logger
+
+</span></i></div></div></code></pre><pre id="footer">
+<table><tr><td><img src="../../png/go101-twitter.png"></td>
+<td>The pages are generated with <a href="https://go101.org/article/tool-golds.html"><b>Golds</b></a> <i>v0.3.6</i>. (GOOS=linux GOARCH=amd64)
+<b>Golds</b> is a <a href="https://go101.org">Go 101</a> project developed by <a href="https://tapirgames.com">Tapir Liu</a>.
+PR and bug reports are welcome and can be submitted to <a href="https://github.com/go101/golds">the issue list</a>.
+Please follow <a href="https://twitter.com/go100and1">@Go100and1</a> (reachable from the left QR code) to get the latest news of <b>Golds</b>.</td></tr></table></pre>

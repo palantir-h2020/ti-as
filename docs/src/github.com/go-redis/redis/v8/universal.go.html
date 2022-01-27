@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Source: universal.go in package github.com/go-redis/redis/v8</title>
+<link href="../../../../../css/light-v0.3.6.css" rel="stylesheet">
+<script src="../../../../../jvs/golds-v0.3.6.js"></script>
+<body onload="onPageLoad()"><div>
+
+<pre id="header"><code><span class="title">Source File</span>
+	universal.go
+
+<span class="title">Belonging Package</span>
+	<a href="../../../../../pkg/github.com/go-redis/redis/v8.html">github.com/go-redis/redis/v8</a>
+</code></pre>
+<style>input[type=radio] {display: none;}
+input[id=r0]:checked ~pre label[for=r0],
+input[id=r1]:checked ~pre label[for=r1],
+input[id=r2]:checked ~pre label[for=r2],
+input[id=r3]:checked ~pre label[for=r3],
+input[id=r4]:checked ~pre label[for=r4],
+input[id=r5]:checked ~pre label[for=r5],
+input[id=r6]:checked ~pre label[for=r6],
+input[id=r7]:checked ~pre label[for=r7],
+input[id=r8]:checked ~pre label[for=r8]
+{background: #226; color: #ff8;}
+input[id=i0]:checked ~pre .i0,
+input[id=i1]:checked ~pre .i1,
+input[id=i2]:checked ~pre .i2,
+input[id=i3]:checked ~pre .i3
+{background: brown; color: #eed;}
+</style><input id="r0" type="radio" name="g"/>
+<input id="r1" type="radio" name="g"/>
+<input id="r2" type="radio" name="g"/>
+<input id="r3" type="radio" name="g"/>
+<input id="r4" type="radio" name="g"/>
+<input id="r5" type="radio" name="g"/>
+<input id="r6" type="radio" name="g"/>
+<input id="r7" type="radio" name="g"/>
+<input id="r8" type="radio" name="g"/>
+<input id="i0" type="radio" name="i"/>
+<input id="i1" type="radio" name="i"/>
+<input id="i2" type="radio" name="i"/>
+<input id="i3" type="radio" name="i"/>
+
+<pre class="line-numbers">
+<span class="codeline" id="line-1"><code><span class="keyword">package</span> redis</code></span>
+<span class="codeline" id="line-2"><code></code></span>
+<span class="codeline" id="line-3"><code><span class="keyword">import</span> (</code></span>
+<span class="codeline" id="line-4"><code>	<label for="i0"><span class="lit-string i0">"context"</span></label></code></span>
+<span class="codeline" id="line-5"><code>	<label for="i1"><span class="lit-string i1">"crypto/tls"</span></label></code></span>
+<span class="codeline" id="line-6"><code>	<label for="i2"><span class="lit-string i2">"net"</span></label></code></span>
+<span class="codeline" id="line-7"><code>	<label for="i3"><span class="lit-string i3">"time"</span></label></code></span>
+<span class="codeline" id="line-8"><code>)</code></span>
+<span class="codeline" id="line-9"><code></code></span>
+<span class="codeline" id="line-10"><code><span class="comment">// UniversalOptions information is required by UniversalClient to establish</span></code></span>
+<span class="codeline" id="line-11"><code><span class="comment">// connections.</span></code></span>
+<span class="codeline" id="line-12"><code><span class="keyword">type</span> <a href="../../../../../pkg/github.com/go-redis/redis/v8.html#name-UniversalOptions" class="ident">UniversalOptions</a> <span class="keyword">struct</span> {</code></span>
+<span class="codeline" id="line-13"><code>	<span class="comment">// Either a single address or a seed list of host:port addresses</span></code></span>
+<span class="codeline" id="line-14"><code><span class="comment">	// of cluster/sentinel nodes.</span></code></span>
+<span class="codeline" id="line-15"><code>	Addrs []<a href="../../../../../pkg/builtin.html#name-string" class="ident">string</a></code></span>
+<span class="codeline" id="line-16"><code></code></span>
+<span class="codeline" id="line-17"><code>	<span class="comment">// Database to be selected after connecting to the server.</span></code></span>
+<span class="codeline" id="line-18"><code><span class="comment">	// Only single-node and failover clients.</span></code></span>
+<span class="codeline" id="line-19"><code>	DB <a href="../../../../../pkg/builtin.html#name-int" class="ident">int</a></code></span>
+<span class="codeline" id="line-20"><code></code></span>
+<span class="codeline" id="line-21"><code>	<span class="comment">// Common options.</span></code></span>
+<span class="codeline" id="line-22"><code></code></span>
+<span class="codeline" id="line-23"><code>	Dialer    <span class="keyword">func</span>(ctx <a href="../../../../../pkg/context.html" class="ident i0">context</a>.<a href="../../../../context/context.go.html#line-62" class="ident">Context</a>, network, addr <a href="../../../../../pkg/builtin.html#name-string" class="ident">string</a>) (<a href="../../../../../pkg/net.html" class="ident i2">net</a>.<a href="../../../../net/net.go.html#line-113" class="ident">Conn</a>, <a href="../../../../../pkg/builtin.html#name-error" class="ident">error</a>)</code></span>
+<span class="codeline" id="line-24"><code>	OnConnect <span class="keyword">func</span>(ctx <a href="../../../../../pkg/context.html" class="ident i0">context</a>.<a href="../../../../context/context.go.html#line-62" class="ident">Context</a>, cn *<a href="redis.go.html#line-726" class="ident">Conn</a>) <a href="../../../../../pkg/builtin.html#name-error" class="ident">error</a></code></span>
+<span class="codeline" id="line-25"><code></code></span>
+<span class="codeline" id="line-26"><code>	Username         <a href="../../../../../pkg/builtin.html#name-string" class="ident">string</a></code></span>
+<span class="codeline" id="line-27"><code>	Password         <a href="../../../../../pkg/builtin.html#name-string" class="ident">string</a></code></span>
+<span class="codeline" id="line-28"><code>	SentinelPassword <a href="../../../../../pkg/builtin.html#name-string" class="ident">string</a></code></span>
+<span class="codeline" id="line-29"><code></code></span>
+<span class="codeline" id="line-30"><code>	MaxRetries      <a href="../../../../../pkg/builtin.html#name-int" class="ident">int</a></code></span>
+<span class="codeline" id="line-31"><code>	MinRetryBackoff <a href="../../../../../pkg/time.html" class="ident i3">time</a>.<a href="../../../../time/time.go.html#line-590" class="ident">Duration</a></code></span>
+<span class="codeline" id="line-32"><code>	MaxRetryBackoff <a href="../../../../../pkg/time.html" class="ident i3">time</a>.<a href="../../../../time/time.go.html#line-590" class="ident">Duration</a></code></span>
+<span class="codeline" id="line-33"><code></code></span>
+<span class="codeline" id="line-34"><code>	DialTimeout  <a href="../../../../../pkg/time.html" class="ident i3">time</a>.<a href="../../../../time/time.go.html#line-590" class="ident">Duration</a></code></span>
+<span class="codeline" id="line-35"><code>	ReadTimeout  <a href="../../../../../pkg/time.html" class="ident i3">time</a>.<a href="../../../../time/time.go.html#line-590" class="ident">Duration</a></code></span>
+<span class="codeline" id="line-36"><code>	WriteTimeout <a href="../../../../../pkg/time.html" class="ident i3">time</a>.<a href="../../../../time/time.go.html#line-590" class="ident">Duration</a></code></span>
+<span class="codeline" id="line-37"><code></code></span>
+<span class="codeline" id="line-38"><code>	<span class="comment">// PoolFIFO uses FIFO mode for each node connection pool GET/PUT (default LIFO).</span></code></span>
+<span class="codeline" id="line-39"><code>	PoolFIFO <a href="../../../../../pkg/builtin.html#name-bool" class="ident">bool</a></code></span>
+<span class="codeline" id="line-40"><code></code></span>
+<span class="codeline" id="line-41"><code>	PoolSize           <a href="../../../../../pkg/builtin.html#name-int" class="ident">int</a></code></span>
+<span class="codeline" id="line-42"><code>	MinIdleConns       <a href="../../../../../pkg/builtin.html#name-int" class="ident">int</a></code></span>
+<span class="codeline" id="line-43"><code>	MaxConnAge         <a href="../../../../../pkg/time.html" class="ident i3">time</a>.<a href="../../../../time/time.go.html#line-590" class="ident">Duration</a></code></span>
+<span class="codeline" id="line-44"><code>	PoolTimeout        <a href="../../../../../pkg/time.html" class="ident i3">time</a>.<a href="../../../../time/time.go.html#line-590" class="ident">Duration</a></code></span>
+<span class="codeline" id="line-45"><code>	IdleTimeout        <a href="../../../../../pkg/time.html" class="ident i3">time</a>.<a href="../../../../time/time.go.html#line-590" class="ident">Duration</a></code></span>
+<span class="codeline" id="line-46"><code>	IdleCheckFrequency <a href="../../../../../pkg/time.html" class="ident i3">time</a>.<a href="../../../../time/time.go.html#line-590" class="ident">Duration</a></code></span>
+<span class="codeline" id="line-47"><code></code></span>
+<span class="codeline" id="line-48"><code>	TLSConfig *<a href="../../../../../pkg/crypto/tls.html" class="ident i1">tls</a>.<a href="../../../../crypto/tls/common.go.html#line-517" class="ident">Config</a></code></span>
+<span class="codeline" id="line-49"><code></code></span>
+<span class="codeline" id="line-50"><code>	<span class="comment">// Only cluster clients.</span></code></span>
+<span class="codeline" id="line-51"><code></code></span>
+<span class="codeline" id="line-52"><code>	MaxRedirects   <a href="../../../../../pkg/builtin.html#name-int" class="ident">int</a></code></span>
+<span class="codeline" id="line-53"><code>	ReadOnly       <a href="../../../../../pkg/builtin.html#name-bool" class="ident">bool</a></code></span>
+<span class="codeline" id="line-54"><code>	RouteByLatency <a href="../../../../../pkg/builtin.html#name-bool" class="ident">bool</a></code></span>
+<span class="codeline" id="line-55"><code>	RouteRandomly  <a href="../../../../../pkg/builtin.html#name-bool" class="ident">bool</a></code></span>
+<span class="codeline" id="line-56"><code></code></span>
+<span class="codeline" id="line-57"><code>	<span class="comment">// The sentinel master name.</span></code></span>
+<span class="codeline" id="line-58"><code><span class="comment">	// Only failover clients.</span></code></span>
+<span class="codeline" id="line-59"><code></code></span>
+<span class="codeline" id="line-60"><code>	MasterName <a href="../../../../../pkg/builtin.html#name-string" class="ident">string</a></code></span>
+<span class="codeline" id="line-61"><code>}</code></span>
+<span class="codeline" id="line-62"><code></code></span>
+<span class="codeline" id="line-63"><code><span class="comment">// Cluster returns cluster options created from the universal options.</span></code></span>
+<span class="codeline" id="line-64"><code><span class="keyword">func</span> (<label for="r0" class="ident">o</label> *<a href="#line-12" class="ident">UniversalOptions</a>) <label for="r1" class="ident">Cluster</label>() *<a href="cluster.go.html#line-26" class="ident">ClusterOptions</a> {</code></span>
+<span class="codeline" id="line-65"><code>	<span class="keyword">if</span> <a href="../../../../../pkg/builtin.html#name-len" class="ident">len</a>(<label for="r0" class="ident">o</label>.<a href="#line-15" class="ident">Addrs</a>) == <span class="lit-number">0</span> {</code></span>
+<span class="codeline" id="line-66"><code>		<label for="r0" class="ident">o</label>.<a href="#line-15" class="ident">Addrs</a> = []<a href="../../../../../pkg/builtin.html#name-string" class="ident">string</a>{<span class="lit-string">"127.0.0.1:6379"</span>}</code></span>
+<span class="codeline" id="line-67"><code>	}</code></span>
+<span class="codeline" id="line-68"><code></code></span>
+<span class="codeline" id="line-69"><code>	<span class="keyword">return</span> &amp;<a href="cluster.go.html#line-26" class="ident">ClusterOptions</a>{</code></span>
+<span class="codeline" id="line-70"><code>		<a href="cluster.go.html#line-28" class="ident">Addrs</a>:     <label for="r0" class="ident">o</label>.<a href="#line-15" class="ident">Addrs</a>,</code></span>
+<span class="codeline" id="line-71"><code>		<a href="cluster.go.html#line-56" class="ident">Dialer</a>:    <label for="r0" class="ident">o</label>.<a href="#line-23" class="ident">Dialer</a>,</code></span>
+<span class="codeline" id="line-72"><code>		<a href="cluster.go.html#line-58" class="ident">OnConnect</a>: <label for="r0" class="ident">o</label>.<a href="#line-24" class="ident">OnConnect</a>,</code></span>
+<span class="codeline" id="line-73"><code></code></span>
+<span class="codeline" id="line-74"><code>		<a href="cluster.go.html#line-60" class="ident">Username</a>: <label for="r0" class="ident">o</label>.<a href="#line-26" class="ident">Username</a>,</code></span>
+<span class="codeline" id="line-75"><code>		<a href="cluster.go.html#line-61" class="ident">Password</a>: <label for="r0" class="ident">o</label>.<a href="#line-27" class="ident">Password</a>,</code></span>
+<span class="codeline" id="line-76"><code></code></span>
+<span class="codeline" id="line-77"><code>		<a href="cluster.go.html#line-36" class="ident">MaxRedirects</a>:   <label for="r0" class="ident">o</label>.<a href="#line-52" class="ident">MaxRedirects</a>,</code></span>
+<span class="codeline" id="line-78"><code>		<a href="cluster.go.html#line-39" class="ident">ReadOnly</a>:       <label for="r0" class="ident">o</label>.<a href="#line-53" class="ident">ReadOnly</a>,</code></span>
+<span class="codeline" id="line-79"><code>		<a href="cluster.go.html#line-42" class="ident">RouteByLatency</a>: <label for="r0" class="ident">o</label>.<a href="#line-54" class="ident">RouteByLatency</a>,</code></span>
+<span class="codeline" id="line-80"><code>		<a href="cluster.go.html#line-45" class="ident">RouteRandomly</a>:  <label for="r0" class="ident">o</label>.<a href="#line-55" class="ident">RouteRandomly</a>,</code></span>
+<span class="codeline" id="line-81"><code></code></span>
+<span class="codeline" id="line-82"><code>		<a href="cluster.go.html#line-63" class="ident">MaxRetries</a>:      <label for="r0" class="ident">o</label>.<a href="#line-30" class="ident">MaxRetries</a>,</code></span>
+<span class="codeline" id="line-83"><code>		<a href="cluster.go.html#line-64" class="ident">MinRetryBackoff</a>: <label for="r0" class="ident">o</label>.<a href="#line-31" class="ident">MinRetryBackoff</a>,</code></span>
+<span class="codeline" id="line-84"><code>		<a href="cluster.go.html#line-65" class="ident">MaxRetryBackoff</a>: <label for="r0" class="ident">o</label>.<a href="#line-32" class="ident">MaxRetryBackoff</a>,</code></span>
+<span class="codeline" id="line-85"><code></code></span>
+<span class="codeline" id="line-86"><code>		<a href="cluster.go.html#line-67" class="ident">DialTimeout</a>:        <label for="r0" class="ident">o</label>.<a href="#line-34" class="ident">DialTimeout</a>,</code></span>
+<span class="codeline" id="line-87"><code>		<a href="cluster.go.html#line-68" class="ident">ReadTimeout</a>:        <label for="r0" class="ident">o</label>.<a href="#line-35" class="ident">ReadTimeout</a>,</code></span>
+<span class="codeline" id="line-88"><code>		<a href="cluster.go.html#line-69" class="ident">WriteTimeout</a>:       <label for="r0" class="ident">o</label>.<a href="#line-36" class="ident">WriteTimeout</a>,</code></span>
+<span class="codeline" id="line-89"><code>		<a href="cluster.go.html#line-72" class="ident">PoolFIFO</a>:           <label for="r0" class="ident">o</label>.<a href="#line-39" class="ident">PoolFIFO</a>,</code></span>
+<span class="codeline" id="line-90"><code>		<a href="cluster.go.html#line-75" class="ident">PoolSize</a>:           <label for="r0" class="ident">o</label>.<a href="#line-41" class="ident">PoolSize</a>,</code></span>
+<span class="codeline" id="line-91"><code>		<a href="cluster.go.html#line-76" class="ident">MinIdleConns</a>:       <label for="r0" class="ident">o</label>.<a href="#line-42" class="ident">MinIdleConns</a>,</code></span>
+<span class="codeline" id="line-92"><code>		<a href="cluster.go.html#line-77" class="ident">MaxConnAge</a>:         <label for="r0" class="ident">o</label>.<a href="#line-43" class="ident">MaxConnAge</a>,</code></span>
+<span class="codeline" id="line-93"><code>		<a href="cluster.go.html#line-78" class="ident">PoolTimeout</a>:        <label for="r0" class="ident">o</label>.<a href="#line-44" class="ident">PoolTimeout</a>,</code></span>
+<span class="codeline" id="line-94"><code>		<a href="cluster.go.html#line-79" class="ident">IdleTimeout</a>:        <label for="r0" class="ident">o</label>.<a href="#line-45" class="ident">IdleTimeout</a>,</code></span>
+<span class="codeline" id="line-95"><code>		<a href="cluster.go.html#line-80" class="ident">IdleCheckFrequency</a>: <label for="r0" class="ident">o</label>.<a href="#line-46" class="ident">IdleCheckFrequency</a>,</code></span>
+<span class="codeline" id="line-96"><code></code></span>
+<span class="codeline" id="line-97"><code>		<a href="cluster.go.html#line-82" class="ident">TLSConfig</a>: <label for="r0" class="ident">o</label>.<a href="#line-48" class="ident">TLSConfig</a>,</code></span>
+<span class="codeline" id="line-98"><code>	}</code></span>
+<span class="codeline" id="line-99"><code>}</code></span>
+<span class="codeline" id="line-100"><code></code></span>
+<span class="codeline" id="line-101"><code><span class="comment">// Failover returns failover options created from the universal options.</span></code></span>
+<span class="codeline" id="line-102"><code><span class="keyword">func</span> (<label for="r2" class="ident">o</label> *<a href="#line-12" class="ident">UniversalOptions</a>) <label for="r3" class="ident">Failover</label>() *<a href="sentinel.go.html#line-21" class="ident">FailoverOptions</a> {</code></span>
+<span class="codeline" id="line-103"><code>	<span class="keyword">if</span> <a href="../../../../../pkg/builtin.html#name-len" class="ident">len</a>(<label for="r2" class="ident">o</label>.<a href="#line-15" class="ident">Addrs</a>) == <span class="lit-number">0</span> {</code></span>
+<span class="codeline" id="line-104"><code>		<label for="r2" class="ident">o</label>.<a href="#line-15" class="ident">Addrs</a> = []<a href="../../../../../pkg/builtin.html#name-string" class="ident">string</a>{<span class="lit-string">"127.0.0.1:26379"</span>}</code></span>
+<span class="codeline" id="line-105"><code>	}</code></span>
+<span class="codeline" id="line-106"><code></code></span>
+<span class="codeline" id="line-107"><code>	<span class="keyword">return</span> &amp;<a href="sentinel.go.html#line-21" class="ident">FailoverOptions</a>{</code></span>
+<span class="codeline" id="line-108"><code>		<a href="sentinel.go.html#line-25" class="ident">SentinelAddrs</a>: <label for="r2" class="ident">o</label>.<a href="#line-15" class="ident">Addrs</a>,</code></span>
+<span class="codeline" id="line-109"><code>		<a href="sentinel.go.html#line-23" class="ident">MasterName</a>:    <label for="r2" class="ident">o</label>.<a href="#line-60" class="ident">MasterName</a>,</code></span>
+<span class="codeline" id="line-110"><code></code></span>
+<span class="codeline" id="line-111"><code>		<a href="sentinel.go.html#line-45" class="ident">Dialer</a>:    <label for="r2" class="ident">o</label>.<a href="#line-23" class="ident">Dialer</a>,</code></span>
+<span class="codeline" id="line-112"><code>		<a href="sentinel.go.html#line-46" class="ident">OnConnect</a>: <label for="r2" class="ident">o</label>.<a href="#line-24" class="ident">OnConnect</a>,</code></span>
+<span class="codeline" id="line-113"><code></code></span>
+<span class="codeline" id="line-114"><code>		<a href="sentinel.go.html#line-50" class="ident">DB</a>:               <label for="r2" class="ident">o</label>.<a href="#line-19" class="ident">DB</a>,</code></span>
+<span class="codeline" id="line-115"><code>		<a href="sentinel.go.html#line-48" class="ident">Username</a>:         <label for="r2" class="ident">o</label>.<a href="#line-26" class="ident">Username</a>,</code></span>
+<span class="codeline" id="line-116"><code>		<a href="sentinel.go.html#line-49" class="ident">Password</a>:         <label for="r2" class="ident">o</label>.<a href="#line-27" class="ident">Password</a>,</code></span>
+<span class="codeline" id="line-117"><code>		<a href="sentinel.go.html#line-27" class="ident">SentinelPassword</a>: <label for="r2" class="ident">o</label>.<a href="#line-28" class="ident">SentinelPassword</a>,</code></span>
+<span class="codeline" id="line-118"><code></code></span>
+<span class="codeline" id="line-119"><code>		<a href="sentinel.go.html#line-52" class="ident">MaxRetries</a>:      <label for="r2" class="ident">o</label>.<a href="#line-30" class="ident">MaxRetries</a>,</code></span>
+<span class="codeline" id="line-120"><code>		<a href="sentinel.go.html#line-53" class="ident">MinRetryBackoff</a>: <label for="r2" class="ident">o</label>.<a href="#line-31" class="ident">MinRetryBackoff</a>,</code></span>
+<span class="codeline" id="line-121"><code>		<a href="sentinel.go.html#line-54" class="ident">MaxRetryBackoff</a>: <label for="r2" class="ident">o</label>.<a href="#line-32" class="ident">MaxRetryBackoff</a>,</code></span>
+<span class="codeline" id="line-122"><code></code></span>
+<span class="codeline" id="line-123"><code>		<a href="sentinel.go.html#line-56" class="ident">DialTimeout</a>:  <label for="r2" class="ident">o</label>.<a href="#line-34" class="ident">DialTimeout</a>,</code></span>
+<span class="codeline" id="line-124"><code>		<a href="sentinel.go.html#line-57" class="ident">ReadTimeout</a>:  <label for="r2" class="ident">o</label>.<a href="#line-35" class="ident">ReadTimeout</a>,</code></span>
+<span class="codeline" id="line-125"><code>		<a href="sentinel.go.html#line-58" class="ident">WriteTimeout</a>: <label for="r2" class="ident">o</label>.<a href="#line-36" class="ident">WriteTimeout</a>,</code></span>
+<span class="codeline" id="line-126"><code></code></span>
+<span class="codeline" id="line-127"><code>		<a href="sentinel.go.html#line-61" class="ident">PoolFIFO</a>:           <label for="r2" class="ident">o</label>.<a href="#line-39" class="ident">PoolFIFO</a>,</code></span>
+<span class="codeline" id="line-128"><code>		<a href="sentinel.go.html#line-63" class="ident">PoolSize</a>:           <label for="r2" class="ident">o</label>.<a href="#line-41" class="ident">PoolSize</a>,</code></span>
+<span class="codeline" id="line-129"><code>		<a href="sentinel.go.html#line-64" class="ident">MinIdleConns</a>:       <label for="r2" class="ident">o</label>.<a href="#line-42" class="ident">MinIdleConns</a>,</code></span>
+<span class="codeline" id="line-130"><code>		<a href="sentinel.go.html#line-65" class="ident">MaxConnAge</a>:         <label for="r2" class="ident">o</label>.<a href="#line-43" class="ident">MaxConnAge</a>,</code></span>
+<span class="codeline" id="line-131"><code>		<a href="sentinel.go.html#line-66" class="ident">PoolTimeout</a>:        <label for="r2" class="ident">o</label>.<a href="#line-44" class="ident">PoolTimeout</a>,</code></span>
+<span class="codeline" id="line-132"><code>		<a href="sentinel.go.html#line-67" class="ident">IdleTimeout</a>:        <label for="r2" class="ident">o</label>.<a href="#line-45" class="ident">IdleTimeout</a>,</code></span>
+<span class="codeline" id="line-133"><code>		<a href="sentinel.go.html#line-68" class="ident">IdleCheckFrequency</a>: <label for="r2" class="ident">o</label>.<a href="#line-46" class="ident">IdleCheckFrequency</a>,</code></span>
+<span class="codeline" id="line-134"><code></code></span>
+<span class="codeline" id="line-135"><code>		<a href="sentinel.go.html#line-70" class="ident">TLSConfig</a>: <label for="r2" class="ident">o</label>.<a href="#line-48" class="ident">TLSConfig</a>,</code></span>
+<span class="codeline" id="line-136"><code>	}</code></span>
+<span class="codeline" id="line-137"><code>}</code></span>
+<span class="codeline" id="line-138"><code></code></span>
+<span class="codeline" id="line-139"><code><span class="comment">// Simple returns basic options created from the universal options.</span></code></span>
+<span class="codeline" id="line-140"><code><span class="keyword">func</span> (<label for="r4" class="ident">o</label> *<a href="#line-12" class="ident">UniversalOptions</a>) <label for="r5" class="ident">Simple</label>() *<a href="options.go.html#line-30" class="ident">Options</a> {</code></span>
+<span class="codeline" id="line-141"><code>	<label for="r6" class="ident">addr</label> := <span class="lit-string">"127.0.0.1:6379"</span></code></span>
+<span class="codeline" id="line-142"><code>	<span class="keyword">if</span> <a href="../../../../../pkg/builtin.html#name-len" class="ident">len</a>(<label for="r4" class="ident">o</label>.<a href="#line-15" class="ident">Addrs</a>) &gt; <span class="lit-number">0</span> {</code></span>
+<span class="codeline" id="line-143"><code>		<label for="r6" class="ident">addr</label> = <label for="r4" class="ident">o</label>.<a href="#line-15" class="ident">Addrs</a>[<span class="lit-number">0</span>]</code></span>
+<span class="codeline" id="line-144"><code>	}</code></span>
+<span class="codeline" id="line-145"><code></code></span>
+<span class="codeline" id="line-146"><code>	<span class="keyword">return</span> &amp;<a href="options.go.html#line-30" class="ident">Options</a>{</code></span>
+<span class="codeline" id="line-147"><code>		<a href="options.go.html#line-35" class="ident">Addr</a>:      <label for="r6" class="ident">addr</label>,</code></span>
+<span class="codeline" id="line-148"><code>		<a href="options.go.html#line-39" class="ident">Dialer</a>:    <label for="r4" class="ident">o</label>.<a href="#line-23" class="ident">Dialer</a>,</code></span>
+<span class="codeline" id="line-149"><code>		<a href="options.go.html#line-42" class="ident">OnConnect</a>: <label for="r4" class="ident">o</label>.<a href="#line-24" class="ident">OnConnect</a>,</code></span>
+<span class="codeline" id="line-150"><code></code></span>
+<span class="codeline" id="line-151"><code>		<a href="options.go.html#line-55" class="ident">DB</a>:       <label for="r4" class="ident">o</label>.<a href="#line-19" class="ident">DB</a>,</code></span>
+<span class="codeline" id="line-152"><code>		<a href="options.go.html#line-47" class="ident">Username</a>: <label for="r4" class="ident">o</label>.<a href="#line-26" class="ident">Username</a>,</code></span>
+<span class="codeline" id="line-153"><code>		<a href="options.go.html#line-52" class="ident">Password</a>: <label for="r4" class="ident">o</label>.<a href="#line-27" class="ident">Password</a>,</code></span>
+<span class="codeline" id="line-154"><code></code></span>
+<span class="codeline" id="line-155"><code>		<a href="options.go.html#line-59" class="ident">MaxRetries</a>:      <label for="r4" class="ident">o</label>.<a href="#line-30" class="ident">MaxRetries</a>,</code></span>
+<span class="codeline" id="line-156"><code>		<a href="options.go.html#line-62" class="ident">MinRetryBackoff</a>: <label for="r4" class="ident">o</label>.<a href="#line-31" class="ident">MinRetryBackoff</a>,</code></span>
+<span class="codeline" id="line-157"><code>		<a href="options.go.html#line-65" class="ident">MaxRetryBackoff</a>: <label for="r4" class="ident">o</label>.<a href="#line-32" class="ident">MaxRetryBackoff</a>,</code></span>
+<span class="codeline" id="line-158"><code></code></span>
+<span class="codeline" id="line-159"><code>		<a href="options.go.html#line-69" class="ident">DialTimeout</a>:  <label for="r4" class="ident">o</label>.<a href="#line-34" class="ident">DialTimeout</a>,</code></span>
+<span class="codeline" id="line-160"><code>		<a href="options.go.html#line-73" class="ident">ReadTimeout</a>:  <label for="r4" class="ident">o</label>.<a href="#line-35" class="ident">ReadTimeout</a>,</code></span>
+<span class="codeline" id="line-161"><code>		<a href="options.go.html#line-77" class="ident">WriteTimeout</a>: <label for="r4" class="ident">o</label>.<a href="#line-36" class="ident">WriteTimeout</a>,</code></span>
+<span class="codeline" id="line-162"><code></code></span>
+<span class="codeline" id="line-163"><code>		<a href="options.go.html#line-82" class="ident">PoolFIFO</a>:           <label for="r4" class="ident">o</label>.<a href="#line-39" class="ident">PoolFIFO</a>,</code></span>
+<span class="codeline" id="line-164"><code>		<a href="options.go.html#line-85" class="ident">PoolSize</a>:           <label for="r4" class="ident">o</label>.<a href="#line-41" class="ident">PoolSize</a>,</code></span>
+<span class="codeline" id="line-165"><code>		<a href="options.go.html#line-88" class="ident">MinIdleConns</a>:       <label for="r4" class="ident">o</label>.<a href="#line-42" class="ident">MinIdleConns</a>,</code></span>
+<span class="codeline" id="line-166"><code>		<a href="options.go.html#line-91" class="ident">MaxConnAge</a>:         <label for="r4" class="ident">o</label>.<a href="#line-43" class="ident">MaxConnAge</a>,</code></span>
+<span class="codeline" id="line-167"><code>		<a href="options.go.html#line-95" class="ident">PoolTimeout</a>:        <label for="r4" class="ident">o</label>.<a href="#line-44" class="ident">PoolTimeout</a>,</code></span>
+<span class="codeline" id="line-168"><code>		<a href="options.go.html#line-99" class="ident">IdleTimeout</a>:        <label for="r4" class="ident">o</label>.<a href="#line-45" class="ident">IdleTimeout</a>,</code></span>
+<span class="codeline" id="line-169"><code>		<a href="options.go.html#line-104" class="ident">IdleCheckFrequency</a>: <label for="r4" class="ident">o</label>.<a href="#line-46" class="ident">IdleCheckFrequency</a>,</code></span>
+<span class="codeline" id="line-170"><code></code></span>
+<span class="codeline" id="line-171"><code>		<a href="options.go.html#line-110" class="ident">TLSConfig</a>: <label for="r4" class="ident">o</label>.<a href="#line-48" class="ident">TLSConfig</a>,</code></span>
+<span class="codeline" id="line-172"><code>	}</code></span>
+<span class="codeline" id="line-173"><code>}</code></span>
+<span class="codeline" id="line-174"><code></code></span>
+<span class="codeline" id="line-175"><code><span class="comment">// --------------------------------------------------------------------</span></code></span>
+<span class="codeline" id="line-176"><code></code></span>
+<span class="codeline" id="line-177"><code><span class="comment">// UniversalClient is an abstract client which - based on the provided options -</span></code></span>
+<span class="codeline" id="line-178"><code><span class="comment">// represents either a ClusterClient, a FailoverClient, or a single-node Client.</span></code></span>
+<span class="codeline" id="line-179"><code><span class="comment">// This can be useful for testing cluster-specific applications locally or having different</span></code></span>
+<span class="codeline" id="line-180"><code><span class="comment">// clients in different environments.</span></code></span>
+<span class="codeline" id="line-181"><code><span class="keyword">type</span> <a href="../../../../../pkg/github.com/go-redis/redis/v8.html#name-UniversalClient" class="ident">UniversalClient</a> <span class="keyword">interface</span> {</code></span>
+<span class="codeline" id="line-182"><code>	<a href="commands.go.html#line-81" class="ident">Cmdable</a></code></span>
+<span class="codeline" id="line-183"><code>	<a href="../../../../../imp/github.com/go-redis/redis/v8.UniversalClient.html#name-Context" class="ident">Context</a>() <a href="../../../../../pkg/context.html" class="ident i0">context</a>.<a href="../../../../context/context.go.html#line-62" class="ident">Context</a></code></span>
+<span class="codeline" id="line-184"><code>	<a href="../../../../../imp/github.com/go-redis/redis/v8.UniversalClient.html#name-AddHook" class="ident">AddHook</a>(<a href="redis.go.html#line-24" class="ident">Hook</a>)</code></span>
+<span class="codeline" id="line-185"><code>	<a href="../../../../../imp/github.com/go-redis/redis/v8.UniversalClient.html#name-Watch" class="ident">Watch</a>(ctx <a href="../../../../../pkg/context.html" class="ident i0">context</a>.<a href="../../../../context/context.go.html#line-62" class="ident">Context</a>, fn <span class="keyword">func</span>(*<a href="tx.go.html#line-17" class="ident">Tx</a>) <a href="../../../../../pkg/builtin.html#name-error" class="ident">error</a>, keys ...<a href="../../../../../pkg/builtin.html#name-string" class="ident">string</a>) <a href="../../../../../pkg/builtin.html#name-error" class="ident">error</a></code></span>
+<span class="codeline" id="line-186"><code>	<a href="../../../../../imp/github.com/go-redis/redis/v8.UniversalClient.html#name-Do" class="ident">Do</a>(ctx <a href="../../../../../pkg/context.html" class="ident i0">context</a>.<a href="../../../../context/context.go.html#line-62" class="ident">Context</a>, args ...<span class="keyword">interface</span>{}) *<a href="command.go.html#line-184" class="ident">Cmd</a></code></span>
+<span class="codeline" id="line-187"><code>	<a href="../../../../../imp/github.com/go-redis/redis/v8.UniversalClient.html#name-Process" class="ident">Process</a>(ctx <a href="../../../../../pkg/context.html" class="ident i0">context</a>.<a href="../../../../context/context.go.html#line-62" class="ident">Context</a>, cmd <a href="command.go.html#line-16" class="ident">Cmder</a>) <a href="../../../../../pkg/builtin.html#name-error" class="ident">error</a></code></span>
+<span class="codeline" id="line-188"><code>	<a href="../../../../../imp/github.com/go-redis/redis/v8.UniversalClient.html#name-Subscribe" class="ident">Subscribe</a>(ctx <a href="../../../../../pkg/context.html" class="ident i0">context</a>.<a href="../../../../context/context.go.html#line-62" class="ident">Context</a>, channels ...<a href="../../../../../pkg/builtin.html#name-string" class="ident">string</a>) *<a href="pubsub.go.html#line-21" class="ident">PubSub</a></code></span>
+<span class="codeline" id="line-189"><code>	<a href="../../../../../imp/github.com/go-redis/redis/v8.UniversalClient.html#name-PSubscribe" class="ident">PSubscribe</a>(ctx <a href="../../../../../pkg/context.html" class="ident i0">context</a>.<a href="../../../../context/context.go.html#line-62" class="ident">Context</a>, channels ...<a href="../../../../../pkg/builtin.html#name-string" class="ident">string</a>) *<a href="pubsub.go.html#line-21" class="ident">PubSub</a></code></span>
+<span class="codeline" id="line-190"><code>	<a href="../../../../../imp/github.com/go-redis/redis/v8.UniversalClient.html#name-Close" class="ident">Close</a>() <a href="../../../../../pkg/builtin.html#name-error" class="ident">error</a></code></span>
+<span class="codeline" id="line-191"><code>	<a href="../../../../../imp/github.com/go-redis/redis/v8.UniversalClient.html#name-PoolStats" class="ident">PoolStats</a>() *<a href="redis.go.html#line-624" class="ident">PoolStats</a></code></span>
+<span class="codeline" id="line-192"><code>}</code></span>
+<span class="codeline" id="line-193"><code></code></span>
+<span class="codeline" id="line-194"><code><span class="keyword">var</span> (</code></span>
+<span class="codeline" id="line-195"><code>	_ <a href="#line-181" class="ident">UniversalClient</a> = (*<a href="redis.go.html#line-550" class="ident">Client</a>)(<a href="../../../../../pkg/builtin.html#name-nil" class="ident">nil</a>)</code></span>
+<span class="codeline" id="line-196"><code>	_ <a href="#line-181" class="ident">UniversalClient</a> = (*<a href="cluster.go.html#line-696" class="ident">ClusterClient</a>)(<a href="../../../../../pkg/builtin.html#name-nil" class="ident">nil</a>)</code></span>
+<span class="codeline" id="line-197"><code>	_ <a href="#line-181" class="ident">UniversalClient</a> = (*<a href="ring.go.html#line-408" class="ident">Ring</a>)(<a href="../../../../../pkg/builtin.html#name-nil" class="ident">nil</a>)</code></span>
+<span class="codeline" id="line-198"><code>)</code></span>
+<span class="codeline" id="line-199"><code></code></span>
+<span class="codeline" id="line-200"><code><span class="comment">// NewUniversalClient returns a new multi client. The type of the returned client depends</span></code></span>
+<span class="codeline" id="line-201"><code><span class="comment">// on the following conditions:</span></code></span>
+<span class="codeline" id="line-202"><code><span class="comment">//</span></code></span>
+<span class="codeline" id="line-203"><code><span class="comment">// 1. If the MasterName option is specified, a sentinel-backed FailoverClient is returned.</span></code></span>
+<span class="codeline" id="line-204"><code><span class="comment">// 2. if the number of Addrs is two or more, a ClusterClient is returned.</span></code></span>
+<span class="codeline" id="line-205"><code><span class="comment">// 3. Otherwise, a single-node Client is returned.</span></code></span>
+<span class="codeline" id="line-206"><code><span class="keyword">func</span> <label for="r7" class="ident"><a href="../../../../../pkg/github.com/go-redis/redis/v8.html#name-NewUniversalClient" class="ident">NewUniversalClient</a></label>(<label for="r8" class="ident">opts</label> *<a href="#line-12" class="ident">UniversalOptions</a>) <a href="#line-181" class="ident">UniversalClient</a> {</code></span>
+<span class="codeline" id="line-207"><code>	<span class="keyword">if</span> <label for="r8" class="ident">opts</label>.<a href="#line-60" class="ident">MasterName</a> != <span class="lit-string">""</span> {</code></span>
+<span class="codeline" id="line-208"><code>		<span class="keyword">return</span> <a href="sentinel.go.html#line-169" class="ident">NewFailoverClient</a>(<label for="r8" class="ident">opts</label>.<a href="#line-102" class="ident">Failover</a>())</code></span>
+<span class="codeline" id="line-209"><code>	} <span class="keyword">else</span> <span class="keyword">if</span> <a href="../../../../../pkg/builtin.html#name-len" class="ident">len</a>(<label for="r8" class="ident">opts</label>.<a href="#line-15" class="ident">Addrs</a>) &gt; <span class="lit-number">1</span> {</code></span>
+<span class="codeline" id="line-210"><code>		<span class="keyword">return</span> <a href="cluster.go.html#line-705" class="ident">NewClusterClient</a>(<label for="r8" class="ident">opts</label>.<a href="#line-64" class="ident">Cluster</a>())</code></span>
+<span class="codeline" id="line-211"><code>	}</code></span>
+<span class="codeline" id="line-212"><code>	<span class="keyword">return</span> <a href="redis.go.html#line-558" class="ident">NewClient</a>(<label for="r8" class="ident">opts</label>.<a href="#line-140" class="ident">Simple</a>())</code></span>
+<span class="codeline" id="line-213"><code>}</code></span>
+</pre><pre id="footer">
+<table><tr><td><img src="../../../../../png/go101-twitter.png"></td>
+<td>The pages are generated with <a href="https://go101.org/article/tool-golds.html"><b>Golds</b></a> <i>v0.3.6</i>. (GOOS=linux GOARCH=amd64)
+<b>Golds</b> is a <a href="https://go101.org">Go 101</a> project developed by <a href="https://tapirgames.com">Tapir Liu</a>.
+PR and bug reports are welcome and can be submitted to <a href="https://github.com/go101/golds">the issue list</a>.
+Please follow <a href="https://twitter.com/go100and1">@Go100and1</a> (reachable from the left QR code) to get the latest news of <b>Golds</b>.</td></tr></table></pre>

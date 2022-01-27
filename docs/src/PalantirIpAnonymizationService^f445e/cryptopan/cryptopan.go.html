@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Source: cryptopan.go in package PalantirIpAnonymizationService/cryptopan</title>
+<link href="../../../css/light-v0.3.6.css" rel="stylesheet">
+<script src="../../../jvs/golds-v0.3.6.js"></script>
+<body onload="onPageLoad()"><div>
+
+<pre id="header"><code><span class="title">Source File</span>
+	cryptopan.go
+
+<span class="title">Belonging Package</span>
+	<a href="../../../pkg/PalantirIpAnonymizationService^f445e/cryptopan.html">PalantirIpAnonymizationService/cryptopan</a>
+</code></pre>
+<style>input[type=radio] {display: none;}
+input[id=r0]:checked ~pre label[for=r0],
+input[id=r1]:checked ~pre label[for=r1],
+input[id=r2]:checked ~pre label[for=r2],
+input[id=r3]:checked ~pre label[for=r3],
+input[id=r4]:checked ~pre label[for=r4],
+input[id=r5]:checked ~pre label[for=r5],
+input[id=r6]:checked ~pre label[for=r6],
+input[id=r7]:checked ~pre label[for=r7],
+input[id=r8]:checked ~pre label[for=r8],
+input[id=r9]:checked ~pre label[for=r9],
+input[id=r10]:checked ~pre label[for=r10],
+input[id=r11]:checked ~pre label[for=r11],
+input[id=r12]:checked ~pre label[for=r12],
+input[id=r13]:checked ~pre label[for=r13],
+input[id=r14]:checked ~pre label[for=r14],
+input[id=r15]:checked ~pre label[for=r15],
+input[id=r16]:checked ~pre label[for=r16],
+input[id=r17]:checked ~pre label[for=r17],
+input[id=r18]:checked ~pre label[for=r18],
+input[id=r19]:checked ~pre label[for=r19],
+input[id=r20]:checked ~pre label[for=r20],
+input[id=r21]:checked ~pre label[for=r21],
+input[id=r22]:checked ~pre label[for=r22],
+input[id=r23]:checked ~pre label[for=r23],
+input[id=r24]:checked ~pre label[for=r24],
+input[id=r25]:checked ~pre label[for=r25],
+input[id=r26]:checked ~pre label[for=r26],
+input[id=r27]:checked ~pre label[for=r27],
+input[id=r28]:checked ~pre label[for=r28],
+input[id=r29]:checked ~pre label[for=r29],
+input[id=r30]:checked ~pre label[for=r30],
+input[id=r31]:checked ~pre label[for=r31],
+input[id=r32]:checked ~pre label[for=r32],
+input[id=r33]:checked ~pre label[for=r33],
+input[id=r34]:checked ~pre label[for=r34],
+input[id=r35]:checked ~pre label[for=r35]
+{background: #226; color: #ff8;}
+input[id=i0]:checked ~pre .i0,
+input[id=i1]:checked ~pre .i1,
+input[id=i2]:checked ~pre .i2,
+input[id=i3]:checked ~pre .i3,
+input[id=i4]:checked ~pre .i4
+{background: brown; color: #eed;}
+</style><input id="r0" type="radio" name="g"/>
+<input id="r1" type="radio" name="g"/>
+<input id="r2" type="radio" name="g"/>
+<input id="r3" type="radio" name="g"/>
+<input id="r4" type="radio" name="g"/>
+<input id="r5" type="radio" name="g"/>
+<input id="r6" type="radio" name="g"/>
+<input id="r7" type="radio" name="g"/>
+<input id="r8" type="radio" name="g"/>
+<input id="r9" type="radio" name="g"/>
+<input id="r10" type="radio" name="g"/>
+<input id="r11" type="radio" name="g"/>
+<input id="r12" type="radio" name="g"/>
+<input id="r13" type="radio" name="g"/>
+<input id="r14" type="radio" name="g"/>
+<input id="r15" type="radio" name="g"/>
+<input id="r16" type="radio" name="g"/>
+<input id="r17" type="radio" name="g"/>
+<input id="r18" type="radio" name="g"/>
+<input id="r19" type="radio" name="g"/>
+<input id="r20" type="radio" name="g"/>
+<input id="r21" type="radio" name="g"/>
+<input id="r22" type="radio" name="g"/>
+<input id="r23" type="radio" name="g"/>
+<input id="r24" type="radio" name="g"/>
+<input id="r25" type="radio" name="g"/>
+<input id="r26" type="radio" name="g"/>
+<input id="r27" type="radio" name="g"/>
+<input id="r28" type="radio" name="g"/>
+<input id="r29" type="radio" name="g"/>
+<input id="r30" type="radio" name="g"/>
+<input id="r31" type="radio" name="g"/>
+<input id="r32" type="radio" name="g"/>
+<input id="r33" type="radio" name="g"/>
+<input id="r34" type="radio" name="g"/>
+<input id="r35" type="radio" name="g"/>
+<input id="i0" type="radio" name="i"/>
+<input id="i1" type="radio" name="i"/>
+<input id="i2" type="radio" name="i"/>
+<input id="i3" type="radio" name="i"/>
+<input id="i4" type="radio" name="i"/>
+
+<pre class="line-numbers">
+<span class="codeline" id="line-1"><code><span class="comment">/*</span></code></span>
+<span class="codeline" id="line-2"><code><span class="comment"> * Copyright (c) 2014, Yawning Angel &lt;yawning at schwanenlied dot me&gt;</span></code></span>
+<span class="codeline" id="line-3"><code><span class="comment"> * All rights reserved.</span></code></span>
+<span class="codeline" id="line-4"><code><span class="comment"> *</span></code></span>
+<span class="codeline" id="line-5"><code><span class="comment"> * Redistribution and use in source and binary forms, with or without</span></code></span>
+<span class="codeline" id="line-6"><code><span class="comment"> * modification, are permitted provided that the following conditions are met:</span></code></span>
+<span class="codeline" id="line-7"><code><span class="comment"> *</span></code></span>
+<span class="codeline" id="line-8"><code><span class="comment"> *  * Redistributions of source code must retain the above copyright notice,</span></code></span>
+<span class="codeline" id="line-9"><code><span class="comment"> *    this list of conditions and the following disclaimer.</span></code></span>
+<span class="codeline" id="line-10"><code><span class="comment"> *</span></code></span>
+<span class="codeline" id="line-11"><code><span class="comment"> *  * Redistributions in binary form must reproduce the above copyright notice,</span></code></span>
+<span class="codeline" id="line-12"><code><span class="comment"> *    this list of conditions and the following disclaimer in the documentation</span></code></span>
+<span class="codeline" id="line-13"><code><span class="comment"> *    and/or other materials provided with the distribution.</span></code></span>
+<span class="codeline" id="line-14"><code><span class="comment"> *</span></code></span>
+<span class="codeline" id="line-15"><code><span class="comment"> * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"</span></code></span>
+<span class="codeline" id="line-16"><code><span class="comment"> * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE</span></code></span>
+<span class="codeline" id="line-17"><code><span class="comment"> * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE</span></code></span>
+<span class="codeline" id="line-18"><code><span class="comment"> * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE</span></code></span>
+<span class="codeline" id="line-19"><code><span class="comment"> * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR</span></code></span>
+<span class="codeline" id="line-20"><code><span class="comment"> * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF</span></code></span>
+<span class="codeline" id="line-21"><code><span class="comment"> * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS</span></code></span>
+<span class="codeline" id="line-22"><code><span class="comment"> * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN</span></code></span>
+<span class="codeline" id="line-23"><code><span class="comment"> * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)</span></code></span>
+<span class="codeline" id="line-24"><code><span class="comment"> * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE</span></code></span>
+<span class="codeline" id="line-25"><code><span class="comment"> * POSSIBILITY OF SUCH DAMAGE.</span></code></span>
+<span class="codeline" id="line-26"><code><span class="comment"> */</span></code></span>
+<span class="codeline" id="line-27"><code></code></span>
+<div class="anchor" id="doc"><span class="codeline" id="line-28"><code><span class="comment">// Package cryptopan implements the Crypto-PAn prefix-preserving IP address</span></code></span>
+<span class="codeline" id="line-29"><code><span class="comment">// sanitization algorithm as specified by J. Fan, J. Xu, M. Ammar, and S. Moon.</span></code></span>
+<span class="codeline" id="line-30"><code><span class="comment">//</span></code></span>
+<span class="codeline" id="line-31"><code><span class="comment">// Crypto-PAn has the following properties:</span></code></span>
+<span class="codeline" id="line-32"><code><span class="comment">//</span></code></span>
+<span class="codeline" id="line-33"><code><span class="comment">//  * One-to-one - The mapping from original IP addresses to anonymized IP</span></code></span>
+<span class="codeline" id="line-34"><code><span class="comment">//    addresses is one-to-one.</span></code></span>
+<span class="codeline" id="line-35"><code><span class="comment">//</span></code></span>
+<span class="codeline" id="line-36"><code><span class="comment">//  * Prefix-preserving - In Crypto-PAn, the IP address anonymization is</span></code></span>
+<span class="codeline" id="line-37"><code><span class="comment">//    prefix-preserving. That is, if two original IP addresses share a k-bit</span></code></span>
+<span class="codeline" id="line-38"><code><span class="comment">//    prefix, their anonymized mappings will also share a k-bit prefix.</span></code></span>
+<span class="codeline" id="line-39"><code><span class="comment">//</span></code></span>
+<span class="codeline" id="line-40"><code><span class="comment">//  * Consistent across traces - Crypto-PAn allows multiple traces to be</span></code></span>
+<span class="codeline" id="line-41"><code><span class="comment">//    sanitized in a consistent way, over time and across locations.  That is,</span></code></span>
+<span class="codeline" id="line-42"><code><span class="comment">//    the same IP address in different traces is anonymized to the same</span></code></span>
+<span class="codeline" id="line-43"><code><span class="comment">//    address, even though the traces might be sanitized separately at</span></code></span>
+<span class="codeline" id="line-44"><code><span class="comment">//    different time and/or at different locations.</span></code></span>
+<span class="codeline" id="line-45"><code><span class="comment">//</span></code></span>
+<span class="codeline" id="line-46"><code><span class="comment">//  * Cryptography-based - To sanitize traces, trace owners provide Crypto-PAn</span></code></span>
+<span class="codeline" id="line-47"><code><span class="comment">//    a secret key.  Anonymization consistency across multiple traces is</span></code></span>
+<span class="codeline" id="line-48"><code><span class="comment">//    achieved by the use of the same key.  The construction of Crypto-PAn</span></code></span>
+<span class="codeline" id="line-49"><code><span class="comment">//    preserves the secrecy of the key and the (pseudo)randomness of the</span></code></span>
+<span class="codeline" id="line-50"><code><span class="comment">//    mapping from an original IP address to its anonymized counterpart.</span></code></span>
+<span class="codeline" id="line-51"><code><span class="comment">//</span></code></span>
+<span class="codeline" id="line-52"><code><span class="comment">// As an experimental extension, anonymizing IPv6 addresses is also somewhat</span></code></span>
+<span class="codeline" id="line-53"><code><span class="comment">// supported, but is untested beyond a cursory examination of the output.</span></code></span></div><span class="codeline" id="line-54"><code><span class="keyword">package</span> cryptopan</code></span>
+<span class="codeline" id="line-55"><code></code></span>
+<span class="codeline" id="line-56"><code><span class="keyword">import</span> (</code></span>
+<span class="codeline" id="line-57"><code>	<label for="i0"><span class="lit-string i0">"crypto/aes"</span></label></code></span>
+<span class="codeline" id="line-58"><code>	<label for="i1"><span class="lit-string i1">"crypto/cipher"</span></label></code></span>
+<span class="codeline" id="line-59"><code>	<label for="i2"><span class="lit-string i2">"crypto/subtle"</span></label></code></span>
+<span class="codeline" id="line-60"><code>	<label for="i3"><span class="lit-string i3">"net"</span></label></code></span>
+<span class="codeline" id="line-61"><code>	<label for="i4"><span class="lit-string i4">"strconv"</span></label></code></span>
+<span class="codeline" id="line-62"><code>)</code></span>
+<span class="codeline" id="line-63"><code></code></span>
+<span class="codeline" id="line-64"><code><span class="keyword">const</span> (</code></span>
+<span class="codeline" id="line-65"><code>	<span class="comment">// Size is the length of the Crypto-PAn keying material.</span></code></span>
+<span class="codeline" id="line-66"><code>	<a href="../../../pkg/PalantirIpAnonymizationService^f445e/cryptopan.html#name-Size" class="ident">Size</a> = <a href="#line-69" class="ident">keySize</a> + <a href="#line-68" class="ident">blockSize</a></code></span>
+<span class="codeline" id="line-67"><code></code></span>
+<span class="codeline" id="line-68"><code>	<a href="../../../pkg/PalantirIpAnonymizationService^f445e/cryptopan.html#name-blockSize" class="ident">blockSize</a> = <a href="../../../pkg/crypto/aes.html" class="ident i0">aes</a>.<a href="../../crypto/aes/cipher.go.html#line-14" class="ident">BlockSize</a></code></span>
+<span class="codeline" id="line-69"><code>	<a href="../../../pkg/PalantirIpAnonymizationService^f445e/cryptopan.html#name-keySize" class="ident">keySize</a>   = <span class="lit-number">128</span> / <span class="lit-number">8</span></code></span>
+<span class="codeline" id="line-70"><code>)</code></span>
+<span class="codeline" id="line-71"><code></code></span>
+<span class="codeline" id="line-72"><code><span class="comment">// KeySizeError is the error returned when the provided key is an invalid</span></code></span>
+<span class="codeline" id="line-73"><code><span class="comment">// length.</span></code></span>
+<span class="codeline" id="line-74"><code><span class="keyword">type</span> <a href="../../../pkg/PalantirIpAnonymizationService^f445e/cryptopan.html#name-KeySizeError" class="ident">KeySizeError</a> <a href="../../../pkg/builtin.html#name-int" class="ident">int</a></code></span>
+<span class="codeline" id="line-75"><code></code></span>
+<span class="codeline" id="line-76"><code><span class="keyword">func</span> (<label for="r0" class="ident">e</label> <a href="#line-74" class="ident">KeySizeError</a>) <label for="r1" class="ident"><a href="../../../imp/PalantirIpAnonymizationService^f445e/cryptopan.KeySizeError.html#name-.Error" class="ident">Error</a></label>() <a href="../../../pkg/builtin.html#name-string" class="ident">string</a> {</code></span>
+<span class="codeline" id="line-77"><code>	<span class="keyword">return</span> <span class="lit-string">"invalid key size "</span> + <a href="../../../pkg/strconv.html" class="ident i4">strconv</a>.<a href="../../strconv/itoa.go.html#line-34" class="ident">Itoa</a>(<a href="../../../pkg/builtin.html#name-int" class="ident">int</a>(<label for="r0" class="ident">e</label>))</code></span>
+<span class="codeline" id="line-78"><code>}</code></span>
+<span class="codeline" id="line-79"><code></code></span>
+<span class="codeline" id="line-80"><code><span class="keyword">type</span> <a href="../../../pkg/PalantirIpAnonymizationService^f445e/cryptopan.html#name-bitvector" class="ident">bitvector</a> [<a href="#line-68" class="ident">blockSize</a>]<a href="../../../pkg/builtin.html#name-byte" class="ident">byte</a></code></span>
+<span class="codeline" id="line-81"><code></code></span>
+<span class="codeline" id="line-82"><code><span class="keyword">func</span> (<label for="r2" class="ident">v</label> *<a href="#line-80" class="ident">bitvector</a>) <label for="r3" class="ident">SetBit</label>(<label for="r4" class="ident">idx</label>, <label for="r5" class="ident">bit</label> <a href="../../../pkg/builtin.html#name-uint" class="ident">uint</a>) {</code></span>
+<span class="codeline" id="line-83"><code>	<label for="r6" class="ident">byteIdx</label> := <label for="r4" class="ident">idx</label> / <span class="lit-number">8</span></code></span>
+<span class="codeline" id="line-84"><code>	<label for="r7" class="ident">bitIdx</label> := <span class="lit-number">7</span> - <label for="r4" class="ident">idx</label>&amp;<span class="lit-number">7</span></code></span>
+<span class="codeline" id="line-85"><code>	<label for="r8" class="ident">oldBit</label> := <a href="../../../pkg/builtin.html#name-uint8" class="ident">uint8</a>((<label for="r2" class="ident">v</label>[<label for="r6" class="ident">byteIdx</label>] &amp; (<span class="lit-number">1</span> &lt;&lt; <label for="r7" class="ident">bitIdx</label>)) &gt;&gt; <label for="r7" class="ident">bitIdx</label>)</code></span>
+<span class="codeline" id="line-86"><code>	<label for="r9" class="ident">flip</label> := <span class="lit-number">1</span> ^ <a href="../../../pkg/crypto/subtle.html" class="ident i2">subtle</a>.<a href="../../crypto/subtle/constant_time.go.html#line-31" class="ident">ConstantTimeByteEq</a>(<label for="r8" class="ident">oldBit</label>, <a href="../../../pkg/builtin.html#name-uint8" class="ident">uint8</a>(<label for="r5" class="ident">bit</label>))</code></span>
+<span class="codeline" id="line-87"><code>	<label for="r2" class="ident">v</label>[<label for="r6" class="ident">byteIdx</label>] ^= <a href="../../../pkg/builtin.html#name-byte" class="ident">byte</a>(<label for="r9" class="ident">flip</label> &lt;&lt; <label for="r7" class="ident">bitIdx</label>)</code></span>
+<span class="codeline" id="line-88"><code>}</code></span>
+<span class="codeline" id="line-89"><code></code></span>
+<span class="codeline" id="line-90"><code><span class="keyword">func</span> (<label for="r10" class="ident">v</label> *<a href="#line-80" class="ident">bitvector</a>) <label for="r11" class="ident">Bit</label>(<label for="r12" class="ident">idx</label> <a href="../../../pkg/builtin.html#name-uint" class="ident">uint</a>) <a href="../../../pkg/builtin.html#name-uint" class="ident">uint</a> {</code></span>
+<span class="codeline" id="line-91"><code>	<label for="r13" class="ident">byteIdx</label> := <label for="r12" class="ident">idx</label> / <span class="lit-number">8</span></code></span>
+<span class="codeline" id="line-92"><code>	<label for="r14" class="ident">bitIdx</label> := <span class="lit-number">7</span> - <label for="r12" class="ident">idx</label>&amp;<span class="lit-number">7</span></code></span>
+<span class="codeline" id="line-93"><code>	<span class="keyword">return</span> <a href="../../../pkg/builtin.html#name-uint" class="ident">uint</a>((<label for="r10" class="ident">v</label>[<label for="r13" class="ident">byteIdx</label>] &amp; (<span class="lit-number">1</span> &lt;&lt; <label for="r14" class="ident">bitIdx</label>)) &gt;&gt; <label for="r14" class="ident">bitIdx</label>)</code></span>
+<span class="codeline" id="line-94"><code>}</code></span>
+<span class="codeline" id="line-95"><code></code></span>
+<span class="codeline" id="line-96"><code><span class="comment">// Cryptopan is an instance of the Crypto-PAn algorithm, initialized with a</span></code></span>
+<span class="codeline" id="line-97"><code><span class="comment">// given key.</span></code></span>
+<span class="codeline" id="line-98"><code><span class="keyword">type</span> <a href="../../../pkg/PalantirIpAnonymizationService^f445e/cryptopan.html#name-Cryptopan" class="ident">Cryptopan</a> <span class="keyword">struct</span> {</code></span>
+<span class="codeline" id="line-99"><code>	aesImpl <a href="../../../pkg/crypto/cipher.html" class="ident i1">cipher</a>.<a href="../../crypto/cipher/cipher.go.html#line-15" class="ident">Block</a></code></span>
+<span class="codeline" id="line-100"><code>	pad     <a href="#line-80" class="ident">bitvector</a></code></span>
+<span class="codeline" id="line-101"><code>}</code></span>
+<span class="codeline" id="line-102"><code></code></span>
+<span class="codeline" id="line-103"><code><span class="comment">// Anonymize anonymizes the provided IP address with the Crypto-PAn algorithm.</span></code></span>
+<span class="codeline" id="line-104"><code><span class="keyword">func</span> (<label for="r15" class="ident">ctx</label> *<a href="#line-98" class="ident">Cryptopan</a>) <label for="r16" class="ident">Anonymize</label>(<label for="r17" class="ident">addr</label> <a href="../../../pkg/net.html" class="ident i3">net</a>.<a href="../../net/ip.go.html#line-35" class="ident">IP</a>) <a href="../../../pkg/net.html" class="ident i3">net</a>.<a href="../../net/ip.go.html#line-35" class="ident">IP</a> {</code></span>
+<span class="codeline" id="line-105"><code>	<span class="keyword">var</span> <label for="r18" class="ident">obfsAddr</label> []<a href="../../../pkg/builtin.html#name-byte" class="ident">byte</a></code></span>
+<span class="codeline" id="line-106"><code>	<span class="keyword">if</span> <label for="r19" class="ident">v4addr</label> := <label for="r17" class="ident">addr</label>.<a href="../../net/ip.go.html#line-211" class="ident">To4</a>(); <label for="r19" class="ident">v4addr</label> != <a href="../../../pkg/builtin.html#name-nil" class="ident">nil</a> {</code></span>
+<span class="codeline" id="line-107"><code>		<label for="r18" class="ident">obfsAddr</label> = <label for="r15" class="ident">ctx</label>.<a href="#line-122" class="ident">anonymize</a>(<label for="r19" class="ident">v4addr</label>)</code></span>
+<span class="codeline" id="line-108"><code>		<span class="keyword">return</span> <a href="../../../pkg/net.html" class="ident i3">net</a>.<a href="../../net/ip.go.html#line-51" class="ident">IPv4</a>(<label for="r18" class="ident">obfsAddr</label>[<span class="lit-number">0</span>], <label for="r18" class="ident">obfsAddr</label>[<span class="lit-number">1</span>], <label for="r18" class="ident">obfsAddr</label>[<span class="lit-number">2</span>], <label for="r18" class="ident">obfsAddr</label>[<span class="lit-number">3</span>])</code></span>
+<span class="codeline" id="line-109"><code>	} <span class="keyword">else</span> <span class="keyword">if</span> <label for="r20" class="ident">v6addr</label> := <label for="r17" class="ident">addr</label>.<a href="../../net/ip.go.html#line-226" class="ident">To16</a>(); <label for="r20" class="ident">v6addr</label> != <a href="../../../pkg/builtin.html#name-nil" class="ident">nil</a> {</code></span>
+<span class="codeline" id="line-110"><code>		<span class="comment">// None of the other implementations in the wild do something like</span></code></span>
+<span class="codeline" id="line-111"><code><span class="comment">		// this, but there's no reason I can think of beyond "it'll be really</span></code></span>
+<span class="codeline" id="line-112"><code><span class="comment">		// slow" as to why it's not valid.</span></code></span>
+<span class="codeline" id="line-113"><code>		<label for="r18" class="ident">obfsAddr</label> = <label for="r15" class="ident">ctx</label>.<a href="#line-122" class="ident">anonymize</a>(<label for="r20" class="ident">v6addr</label>)</code></span>
+<span class="codeline" id="line-114"><code>		<label for="r21" class="ident">addr</label> := <a href="../../../pkg/builtin.html#name-make" class="ident">make</a>(<a href="../../../pkg/net.html" class="ident i3">net</a>.<a href="../../net/ip.go.html#line-35" class="ident">IP</a>, <a href="../../../pkg/net.html" class="ident i3">net</a>.<a href="../../net/ip.go.html#line-23" class="ident">IPv6len</a>)</code></span>
+<span class="codeline" id="line-115"><code>		<a href="../../../pkg/builtin.html#name-copy" class="ident">copy</a>(<label for="r21" class="ident">addr</label>[:], <label for="r18" class="ident">obfsAddr</label>[:])</code></span>
+<span class="codeline" id="line-116"><code>		<span class="keyword">return</span> <label for="r21" class="ident">addr</label></code></span>
+<span class="codeline" id="line-117"><code>	}</code></span>
+<span class="codeline" id="line-118"><code></code></span>
+<span class="codeline" id="line-119"><code>	<a href="../../../pkg/builtin.html#name-panic" class="ident">panic</a>(<span class="lit-string">"unsupported address type"</span>)</code></span>
+<span class="codeline" id="line-120"><code>}</code></span>
+<span class="codeline" id="line-121"><code></code></span>
+<span class="codeline" id="line-122"><code><span class="keyword">func</span> (<label for="r22" class="ident">ctx</label> *<a href="#line-98" class="ident">Cryptopan</a>) <label for="r23" class="ident">anonymize</label>(<label for="r24" class="ident">addr</label> <a href="../../../pkg/net.html" class="ident i3">net</a>.<a href="../../net/ip.go.html#line-35" class="ident">IP</a>) []<a href="../../../pkg/builtin.html#name-byte" class="ident">byte</a> {</code></span>
+<span class="codeline" id="line-123"><code>	<label for="r25" class="ident">addrBits</label> := <a href="../../../pkg/builtin.html#name-uint" class="ident">uint</a>(<a href="../../../pkg/builtin.html#name-len" class="ident">len</a>(<label for="r24" class="ident">addr</label>) * <span class="lit-number">8</span>)</code></span>
+<span class="codeline" id="line-124"><code>	<span class="keyword">var</span> <label for="r26" class="ident">origAddr</label>, <label for="r27" class="ident">input</label>, <label for="r28" class="ident">output</label>, <label for="r29" class="ident">toXor</label> <a href="#line-80" class="ident">bitvector</a></code></span>
+<span class="codeline" id="line-125"><code>	<a href="../../../pkg/builtin.html#name-copy" class="ident">copy</a>(<label for="r26" class="ident">origAddr</label>[:], <label for="r24" class="ident">addr</label>[:])</code></span>
+<span class="codeline" id="line-126"><code>	<a href="../../../pkg/builtin.html#name-copy" class="ident">copy</a>(<label for="r27" class="ident">input</label>[:], <label for="r22" class="ident">ctx</label>.<a href="#line-100" class="ident">pad</a>[:])</code></span>
+<span class="codeline" id="line-127"><code></code></span>
+<span class="codeline" id="line-128"><code>	<span class="comment">// The first bit does not take any bits from orig_addr.</span></code></span>
+<span class="codeline" id="line-129"><code>	<label for="r22" class="ident">ctx</label>.<a href="#line-99" class="ident">aesImpl</a>.<a href="../../crypto/cipher/cipher.go.html#line-21" class="ident">Encrypt</a>(<label for="r28" class="ident">output</label>[:], <label for="r27" class="ident">input</label>[:])</code></span>
+<span class="codeline" id="line-130"><code>	<label for="r29" class="ident">toXor</label>.<a href="#line-82" class="ident">SetBit</a>(<span class="lit-number">0</span>, <label for="r28" class="ident">output</label>.<a href="#line-90" class="ident">Bit</a>(<span class="lit-number">0</span>))</code></span>
+<span class="codeline" id="line-131"><code></code></span>
+<span class="codeline" id="line-132"><code>	<span class="comment">// The rest of the one time pad is build by copying orig_addr into the AES</span></code></span>
+<span class="codeline" id="line-133"><code><span class="comment">	// input bit by bit (MSB first) and encrypting with ECB-AES128.</span></code></span>
+<span class="codeline" id="line-134"><code>	<span class="keyword">for</span> <label for="r30" class="ident">pos</label> := <a href="../../../pkg/builtin.html#name-uint" class="ident">uint</a>(<span class="lit-number">1</span>); <label for="r30" class="ident">pos</label> &lt; <label for="r25" class="ident">addrBits</label>; <label for="r30" class="ident">pos</label>++ {</code></span>
+<span class="codeline" id="line-135"><code>		<span class="comment">// Copy an additional bit into input from orig_addr.</span></code></span>
+<span class="codeline" id="line-136"><code>		<label for="r27" class="ident">input</label>.<a href="#line-82" class="ident">SetBit</a>(<label for="r30" class="ident">pos</label>-<span class="lit-number">1</span>, <label for="r26" class="ident">origAddr</label>.<a href="#line-90" class="ident">Bit</a>(<label for="r30" class="ident">pos</label>-<span class="lit-number">1</span>))</code></span>
+<span class="codeline" id="line-137"><code></code></span>
+<span class="codeline" id="line-138"><code>		<span class="comment">// ECB-AES128 the input, only one bit of output is used per iteration.</span></code></span>
+<span class="codeline" id="line-139"><code>		<label for="r22" class="ident">ctx</label>.<a href="#line-99" class="ident">aesImpl</a>.<a href="../../crypto/cipher/cipher.go.html#line-21" class="ident">Encrypt</a>(<label for="r28" class="ident">output</label>[:], <label for="r27" class="ident">input</label>[:])</code></span>
+<span class="codeline" id="line-140"><code></code></span>
+<span class="codeline" id="line-141"><code>		<span class="comment">// Note: Per David Stott@Lucent, using the MSB of the PRF output leads</span></code></span>
+<span class="codeline" id="line-142"><code><span class="comment">		// to weaker anonymized output.  Jinliang Fan (one of the original</span></code></span>
+<span class="codeline" id="line-143"><code><span class="comment">		// Crypto-PAn authors) claims that a new version that incorporates one</span></code></span>
+<span class="codeline" id="line-144"><code><span class="comment">		// of his suggested tweaks is forthcoming, but it looks like that never</span></code></span>
+<span class="codeline" id="line-145"><code><span class="comment">		// happened, and no one else does that.</span></code></span>
+<span class="codeline" id="line-146"><code><span class="comment">		//</span></code></span>
+<span class="codeline" id="line-147"><code><span class="comment">		// Something like: toXor.SetBit(pos, output.Bit(pos)) will fix this,</span></code></span>
+<span class="codeline" id="line-148"><code><span class="comment">		// but will lead to different output than every other implementation.</span></code></span>
+<span class="codeline" id="line-149"><code>		<label for="r29" class="ident">toXor</label>.<a href="#line-82" class="ident">SetBit</a>(<label for="r30" class="ident">pos</label>, <label for="r28" class="ident">output</label>.<a href="#line-90" class="ident">Bit</a>(<span class="lit-number">0</span>))</code></span>
+<span class="codeline" id="line-150"><code>	}</code></span>
+<span class="codeline" id="line-151"><code></code></span>
+<span class="codeline" id="line-152"><code>	<span class="comment">// Xor the pseudorandom one-time-pad with the address and return.</span></code></span>
+<span class="codeline" id="line-153"><code>	<span class="keyword">for</span> <label for="r31" class="ident">i</label> := <span class="lit-number">0</span>; <label for="r31" class="ident">i</label> &lt; <a href="../../../pkg/builtin.html#name-len" class="ident">len</a>(<label for="r24" class="ident">addr</label>); <label for="r31" class="ident">i</label>++ {</code></span>
+<span class="codeline" id="line-154"><code>		<label for="r29" class="ident">toXor</label>[<label for="r31" class="ident">i</label>] ^= <label for="r26" class="ident">origAddr</label>[<label for="r31" class="ident">i</label>]</code></span>
+<span class="codeline" id="line-155"><code>	}</code></span>
+<span class="codeline" id="line-156"><code>	<span class="keyword">return</span> <label for="r29" class="ident">toXor</label>[:<a href="../../../pkg/builtin.html#name-len" class="ident">len</a>(<label for="r24" class="ident">addr</label>)]</code></span>
+<span class="codeline" id="line-157"><code>}</code></span>
+<span class="codeline" id="line-158"><code></code></span>
+<span class="codeline" id="line-159"><code><span class="comment">// New constructs and initializes Crypto-PAn with a given key.</span></code></span>
+<span class="codeline" id="line-160"><code><span class="keyword">func</span> <label for="r32" class="ident"><a href="../../../pkg/PalantirIpAnonymizationService^f445e/cryptopan.html#name-New" class="ident">New</a></label>(<label for="r33" class="ident">key</label> []<a href="../../../pkg/builtin.html#name-byte" class="ident">byte</a>) (<label for="r34" class="ident">ctx</label> *<a href="#line-98" class="ident">Cryptopan</a>, <label for="r35" class="ident">err</label> <a href="../../../pkg/builtin.html#name-error" class="ident">error</a>) {</code></span>
+<span class="codeline" id="line-161"><code>	<span class="keyword">if</span> <a href="../../../pkg/builtin.html#name-len" class="ident">len</a>(<label for="r33" class="ident">key</label>) != <a href="#line-66" class="ident">Size</a> {</code></span>
+<span class="codeline" id="line-162"><code>		<span class="keyword">return</span> <a href="../../../pkg/builtin.html#name-nil" class="ident">nil</a>, <a href="#line-74" class="ident">KeySizeError</a>(<a href="../../../pkg/builtin.html#name-len" class="ident">len</a>(<label for="r33" class="ident">key</label>))</code></span>
+<span class="codeline" id="line-163"><code>	}</code></span>
+<span class="codeline" id="line-164"><code></code></span>
+<span class="codeline" id="line-165"><code>	<label for="r34" class="ident">ctx</label> = <a href="../../../pkg/builtin.html#name-new" class="ident">new</a>(<a href="#line-98" class="ident">Cryptopan</a>)</code></span>
+<span class="codeline" id="line-166"><code>	<span class="keyword">if</span> <label for="r34" class="ident">ctx</label>.<a href="#line-99" class="ident">aesImpl</a>, <label for="r35" class="ident">err</label> = <a href="../../../pkg/crypto/aes.html" class="ident i0">aes</a>.<a href="../../crypto/aes/cipher.go.html#line-32" class="ident">NewCipher</a>(<label for="r33" class="ident">key</label>[<span class="lit-number">0</span>:<a href="#line-69" class="ident">keySize</a>]); <label for="r35" class="ident">err</label> != <a href="../../../pkg/builtin.html#name-nil" class="ident">nil</a> {</code></span>
+<span class="codeline" id="line-167"><code>		<span class="keyword">return</span> <a href="../../../pkg/builtin.html#name-nil" class="ident">nil</a>, <label for="r35" class="ident">err</label></code></span>
+<span class="codeline" id="line-168"><code>	}</code></span>
+<span class="codeline" id="line-169"><code>	<label for="r34" class="ident">ctx</label>.<a href="#line-99" class="ident">aesImpl</a>.<a href="../../crypto/cipher/cipher.go.html#line-21" class="ident">Encrypt</a>(<label for="r34" class="ident">ctx</label>.<a href="#line-100" class="ident">pad</a>[:], <label for="r33" class="ident">key</label>[<a href="#line-69" class="ident">keySize</a>:])</code></span>
+<span class="codeline" id="line-170"><code></code></span>
+<span class="codeline" id="line-171"><code>	<span class="keyword">return</span></code></span>
+<span class="codeline" id="line-172"><code>}</code></span>
+</pre><pre id="footer">
+<table><tr><td><img src="../../../png/go101-twitter.png"></td>
+<td>The pages are generated with <a href="https://go101.org/article/tool-golds.html"><b>Golds</b></a> <i>v0.3.6</i>. (GOOS=linux GOARCH=amd64)
+<b>Golds</b> is a <a href="https://go101.org">Go 101</a> project developed by <a href="https://tapirgames.com">Tapir Liu</a>.
+PR and bug reports are welcome and can be submitted to <a href="https://github.com/go101/golds">the issue list</a>.
+Please follow <a href="https://twitter.com/go100and1">@Go100and1</a> (reachable from the left QR code) to get the latest news of <b>Golds</b>.</td></tr></table></pre>
